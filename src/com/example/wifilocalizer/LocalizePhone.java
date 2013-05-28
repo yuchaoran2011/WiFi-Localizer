@@ -6,6 +6,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 
+
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.app.Activity;
@@ -26,7 +27,7 @@ class ScanComparable implements Comparator<ScanResult> {
 	 
     @Override
     public int compare(ScanResult s1, ScanResult s2) {
-        return (s1.level>s2.level ? 1 : (s1.level==s2.level ? 0 : -1));
+        return (s1.level>s2.level ? -1 : (s1.level==s2.level ? 0 : 1));
     }
 }
 
@@ -38,7 +39,7 @@ public class LocalizePhone extends Activity {
 	
 	@SuppressLint("NewApi")
 	
-	HashMap<String,Integer> macRSSI = new HashMap<String,Integer>();
+	
 	
 	//private SensorManager mSensorManager;
 	//private Sensor mSensor;
@@ -111,7 +112,7 @@ public class LocalizePhone extends Activity {
             }
         };
 
-        handler.postDelayed(r, 100);
+        handler.postDelayed(r, 0);
         
 	}
 	
@@ -119,6 +120,7 @@ public class LocalizePhone extends Activity {
 	
 	public void scan() {
 	
+		HashMap<String,Integer> macRSSI = new HashMap<String,Integer>();
 		TextView textView = new TextView(this);
 		textView.setMovementMethod(new ScrollingMovementMethod());
 		textView.setTextSize(16);
@@ -145,7 +147,9 @@ public class LocalizePhone extends Activity {
 					macRSSI.put(scan.BSSID.toString(), scan.level);
 					textView.append("\n\n" + scan.SSID.toString() + " " + scan.BSSID.toString() + " " + macRSSI.get(scan.BSSID.toString()));
 				}
-				textView.setText(totalLevel/macRSSI.size() +" " + d.getTime() + "\n" + textView.getText());
+				textView.setText("Average RSSI: " + totalLevel/macRSSI.size() +"\nCurrent System Timestamp: " + d.getTime() + " " 
+				+ "\nNumber of Access Points detected: " + macRSSI.size() + "\n\nSignature (Ordered by RSSI values from strongest to weakest): "
+						+ textView.getText());
 			
 				//String signature = textView.getText().toString();
 			

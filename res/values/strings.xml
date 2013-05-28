@@ -3,11 +3,14 @@
 
     <string name="app_name">Wifi Localizer</string>
     <string name="action_settings">Settings</string>
-    <string name="button_scan">Scan</string>
-    <string name="button_localize">Find out my position</string>
+    <string name="button_scan">Say Hello</string>
+    <string name="button_localize">Scan Wifi Networks</string>
+    <string name="button_mark">Mark my location on the map</string>
     <string name="edit_message">Enter a message</string>
-    <string name="title_activity_display_message">Wi-fi Scanning Results</string>
+    <string name="map_alt">Floor plan of the building</string>
+    <string name="title_activity_display_message">Greetings</string>
     <string name="hello_world">Hello world!</string>
-    <string name="title_activity_localize_phone">My Position</string>
+    <string name="title_activity_localize_phone">Wi-fi Scanning Results</string>
+    <string name="title_activity_mark_on_map">MarkOnMap</string>
 
 </resources>

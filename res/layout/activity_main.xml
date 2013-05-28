@@ -8,6 +8,7 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     android:orientation="vertical"
     tools:context=".MainActivity" >
+    <!--  
     <EditText 
         android:id="@+id/edit_message"
         android:layout_weight="1"
@@ -19,11 +20,28 @@
         android:layout_height="wrap_content"
         android:onClick="sendMessage"
         android:text="@string/button_scan" /> 
+    --> 
+    <com.matabii.dev.scaleimageview.ScaleImageView
+        android:id="@+id/imageView1"
+        android:layout_width="fill_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1.00"
+        android:contentDescription="@string/map_alt"
+        android:adjustViewBounds="true"
+        android:src="@drawable/path20120423" />
         
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:onClick="localize"
         android:text="@string/button_localize" />
+    
+    <!--  
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:onClick="mark"
+        android:text="@string/button_mark" />
+    -->
     
 </LinearLayout>

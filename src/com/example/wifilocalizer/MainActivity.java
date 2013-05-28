@@ -1,11 +1,11 @@
 package com.example.wifilocalizer;
 
+
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.View;
-import android.widget.EditText;
 
 
 public class MainActivity extends Activity {
@@ -25,6 +25,7 @@ public class MainActivity extends Activity {
         return true;
     }
     
+    /*
     public void sendMessage(View view) {
     	Intent intent = new Intent(this, DisplayMessageActivity.class);
     	EditText editText = (EditText)findViewById(R.id.edit_message);
@@ -32,6 +33,7 @@ public class MainActivity extends Activity {
     	intent.putExtra(EXTRA_MESSAGE, message);
     	startActivity(intent);
     }
+    */
     
     
     public void localize(View view) {

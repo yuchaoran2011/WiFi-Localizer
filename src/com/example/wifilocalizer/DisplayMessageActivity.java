@@ -18,8 +18,6 @@ public class DisplayMessageActivity extends Activity {
 	
 	
 	@SuppressLint("NewApi")
-
-	
 	
 	
 
