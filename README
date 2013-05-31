@@ -1,1 +1,3 @@
 This directory contains code for an Android app that determines indoor location based on Wifi fingerprints.
+
+The pinch zooming functionality on ImageView is from https://github.com/matabii/scale-imageview-android.

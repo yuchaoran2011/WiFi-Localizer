@@ -9,7 +9,7 @@
     <string name="edit_message">Enter a message</string>
     <string name="map_alt">Floor plan of the building</string>
     <string name="title_activity_display_message">Greetings</string>
-    <string name="hello_world">Hello world!</string>
+    <string name="hello_world">Hello world! Scanning in progress, please wait.</string>
     <string name="title_activity_localize_phone">Wi-fi Scanning Results</string>
     <string name="title_activity_mark_on_map">MarkOnMap</string>
 

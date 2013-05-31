@@ -6,11 +6,13 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 
-
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.app.Activity;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 import android.os.Build;
@@ -21,6 +23,9 @@ import android.text.method.ScrollingMovementMethod;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
+
+
+
 
 
 class ScanComparable implements Comparator<ScanResult> {
@@ -34,24 +39,79 @@ class ScanComparable implements Comparator<ScanResult> {
 
 
 
-
 public class LocalizePhone extends Activity {
 	
 	@SuppressLint("NewApi")
 	
+	TextView textView;
+	WifiManager wifi;
 	
-	
-	//private SensorManager mSensorManager;
-	//private Sensor mSensor;
 
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
-		
-		
+			
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_localize_phone);
+		
+		
+		
+		IntentFilter i = new IntentFilter();
+		i.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
+		registerReceiver(new BroadcastReceiver(){
+			
+		long prev = 0;
+		
+		@Override
+		public void onReceive(Context c, Intent i){
+		// Code to execute when SCAN_RESULTS_AVAILABLE_ACTION event occurs
+			
+			Date d = new Date();
+			long curr = d.getTime();
+			
+			HashMap<String,Integer> macRSSI = new HashMap<String,Integer>();
+			textView = new TextView(c);
+			textView.setMovementMethod(new ScrollingMovementMethod());
+			textView.setTextSize(16);
+			
+			int totalLevel = 0;
+			List<ScanResult> scanResults = wifi.getScanResults();
+			
+			if(scanResults == null || scanResults.isEmpty()) {
+				textView.setText("No wifi network detected!");
+				setContentView(textView);
+			}
+			else {
+			
+				Collections.sort(scanResults, new ScanComparable());
+			
+				for (ScanResult scan : scanResults) {
+					totalLevel += scan.level;
+					macRSSI.put(scan.BSSID.toString(), scan.level);
+					textView.append("\n\n" + scan.SSID.toString() + " " + scan.BSSID.toString() + " " + macRSSI.get(scan.BSSID.toString()));
+				}
+				textView.setText("Average RSSI: " + totalLevel/macRSSI.size() +"\nCurrent System Timestamp: " + d.getTime() + " " 
+				+ "\nNumber of Access Points detected: " + macRSSI.size() + "\n\nSignature (Ordered by RSSI values from strongest to weakest): "
+						+ textView.getText());
+			
+				}
+			
+			
+			if (prev != 0)
+				textView.setText("Hey! Scan results are now available!\n" + "Time used to finish the scan: " + (curr-prev) + "\n\n" + textView.getText());
+			else
+				textView.setText("Hey! Scan results are now available!\n\n" + textView.getText());
+				
+			prev = curr;
+			
+			textView.setMovementMethod(new ScrollingMovementMethod());
+			textView.setTextSize(16);	
+			setContentView(textView);
+			}
+		}
+	,i);
 	    	
+			
 			
 		// Show the Up button in the action bar.
 		setupActionBar();
@@ -119,53 +179,14 @@ public class LocalizePhone extends Activity {
 	
 	
 	public void scan() {
-	
-		HashMap<String,Integer> macRSSI = new HashMap<String,Integer>();
-		TextView textView = new TextView(this);
-		textView.setMovementMethod(new ScrollingMovementMethod());
-		textView.setTextSize(16);
 		
-		WifiManager wifi = (WifiManager)getSystemService(Context.WIFI_SERVICE);
+		wifi = (WifiManager)getSystemService(Context.WIFI_SERVICE);
 		if (wifi.isWifiEnabled()) {
-			if (wifi.startScan()) {
-
-
-			Date d = new Date();
-			int totalLevel = 0;
-			List<ScanResult> scanResults = wifi.getScanResults();
-			
-			if(scanResults == null || scanResults.isEmpty()) {
-				textView.setText("No wifi network detected!");
-				setContentView(textView);
-			}
-			else {
-			
-				Collections.sort(scanResults, new ScanComparable());
-			
-				for (ScanResult scan : scanResults) {
-					totalLevel += scan.level;
-					macRSSI.put(scan.BSSID.toString(), scan.level);
-					textView.append("\n\n" + scan.SSID.toString() + " " + scan.BSSID.toString() + " " + macRSSI.get(scan.BSSID.toString()));
-				}
-				textView.setText("Average RSSI: " + totalLevel/macRSSI.size() +"\nCurrent System Timestamp: " + d.getTime() + " " 
-				+ "\nNumber of Access Points detected: " + macRSSI.size() + "\n\nSignature (Ordered by RSSI values from strongest to weakest): "
-						+ textView.getText());
-			
-				//String signature = textView.getText().toString();
-			
-				//contactServerDatabase(macRSSI);
-				//DisplayRetrievedLocation();
-				}
-			}
-			else {
+			if (wifi.startScan()) { }
+			else 
 				textView.setText("Scanning failed!");
-			}
-			setContentView(textView);
-			
 		}
-		else {
+		else 
 			textView.setText("Your wifi is currently turned off. To find out your location in the building, turn on wifi then try again.");
-			setContentView(textView);
-		}
 	}
 }
