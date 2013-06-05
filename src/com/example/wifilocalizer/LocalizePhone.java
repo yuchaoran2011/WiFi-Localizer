@@ -1,10 +1,22 @@
 package com.example.wifilocalizer;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.List;
+
+import org.json.JSONObject;
 
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
@@ -15,11 +27,13 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v4.app.NavUtils;
 import android.text.method.ScrollingMovementMethod;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
@@ -68,13 +82,15 @@ public class LocalizePhone extends Activity {
 			
 			Date d = new Date();
 			long curr = d.getTime();
+			JSONObject query;
 			
-			HashMap<String,Integer> macRSSI = new HashMap<String,Integer>();
+			Hashtable<String,Integer> macRSSI = new Hashtable<String,Integer>();
+			HashMap<String, String> postedData = new HashMap<String, String>();
+			
 			textView = new TextView(c);
 			textView.setMovementMethod(new ScrollingMovementMethod());
 			textView.setTextSize(16);
 			
-			int totalLevel = 0;
 			List<ScanResult> scanResults = wifi.getScanResults();
 			
 			if(scanResults == null || scanResults.isEmpty()) {
@@ -86,11 +102,22 @@ public class LocalizePhone extends Activity {
 				Collections.sort(scanResults, new ScanComparable());
 			
 				for (ScanResult scan : scanResults) {
-					totalLevel += scan.level;
 					macRSSI.put(scan.BSSID.toString(), scan.level);
 					textView.append("\n\n" + scan.SSID.toString() + " " + scan.BSSID.toString() + " " + macRSSI.get(scan.BSSID.toString()));
 				}
-				textView.setText("Average RSSI: " + totalLevel/macRSSI.size() +"\nCurrent System Timestamp: " + d.getTime() + " " 
+				
+				
+				
+				postedData.put("1", (new JSONObject(macRSSI).toString()));
+				query = new JSONObject(postedData);
+				new QueryTask("http://192.168.1.3:8000/wifi/add_fingerprint", query).execute(c);
+
+				
+				
+				textView.setText("\nQuery sent to the server!\n" + textView.getText());
+				
+				
+				textView.setText("\nCurrent System Timestamp: " + d.getTime() + " " 
 				+ "\nNumber of Access Points detected: " + macRSSI.size() + "\n\nSignature (Ordered by RSSI values from strongest to weakest): "
 						+ textView.getText());
 			
@@ -98,7 +125,7 @@ public class LocalizePhone extends Activity {
 			
 			
 			if (prev != 0)
-				textView.setText("Hey! Scan results are now available!\n" + "Time used to finish the scan: " + (curr-prev) + "\n\n" + textView.getText());
+				textView.setText("Hey! Scan results are now available!\n" + "Time spent to finish the scan: " + (curr-prev) + "\n\n" + textView.getText());
 			else
 				textView.setText("Hey! Scan results are now available!\n\n" + textView.getText());
 				
@@ -189,4 +216,75 @@ public class LocalizePhone extends Activity {
 		else 
 			textView.setText("Your wifi is currently turned off. To find out your location in the building, turn on wifi then try again.");
 	}
+	
+	
+
+	
+	
+	private class QueryTask extends AsyncTask<Context, Void, Void> 
+    {
+        private String url_str;
+        private JSONObject json;
+
+        public QueryTask(String url, JSONObject json)
+        {
+            this.url_str = url;
+            this.json = json;
+        }
+        
+        
+        protected Void doInBackground(Context... c) {
+        	//HttpURLConnection conn;
+			//OutputStream os;
+			byte[] data = json.toString().getBytes();
+		
+			try {
+				
+				URL url = new URL(url_str);
+		
+				
+				HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
+				   try {
+				     urlConnection.setDoOutput(true);
+				     urlConnection.setChunkedStreamingMode(0);
+
+				     OutputStream out = new BufferedOutputStream(urlConnection.getOutputStream());
+				     //writeStream(out);
+				     out.write(data);
+				     out.flush();
+				     
+				     InputStream in = new BufferedInputStream(urlConnection.getInputStream());
+				     readStream(in);
+				   }
+				    finally {
+				     urlConnection.disconnect();
+				    }
+				  
+				Log.d("URLEXCEPTION","SUCCESS!");
+			}
+			catch (MalformedURLException e){ }
+			catch (IOException e){Log.d("URLEXCEPTION","FAILURE!"+ e.getMessage()); }
+			
+			return null;
+        }
+        
+        
+        private String readStream(InputStream is) {
+            try {
+              ByteArrayOutputStream bo = new ByteArrayOutputStream();
+              int i = is.read();
+              while(i != -1) {
+                bo.write(i);
+                i = is.read();
+              }
+              return bo.toString();
+            } catch (IOException e) {
+            	
+              Log.d("readStreamException", "Read Stream failed!!");
+              return "";
+         
+            }
+        }
+    }
+	
 }
