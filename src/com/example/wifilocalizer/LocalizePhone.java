@@ -13,7 +13,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Hashtable;
 import java.util.List;
 
 import org.json.JSONObject;
@@ -82,10 +81,10 @@ public class LocalizePhone extends Activity {
 			
 			Date d = new Date();
 			long curr = d.getTime();
-			JSONObject query;
+			JSONObject query, queryCore;
 			
-			Hashtable<String,Integer> macRSSI = new Hashtable<String,Integer>();
-			HashMap<String, String> postedData = new HashMap<String, String>();
+			HashMap<String,Integer> macRSSI = new HashMap<String,Integer>();
+			HashMap<String, JSONObject> postedData = new HashMap<String, JSONObject>();
 			
 			textView = new TextView(c);
 			textView.setMovementMethod(new ScrollingMovementMethod());
@@ -108,11 +107,13 @@ public class LocalizePhone extends Activity {
 				
 				
 				
-				postedData.put("1", (new JSONObject(macRSSI).toString()));
+				queryCore = new JSONObject(macRSSI);
+				postedData.put("1", queryCore);
 				query = new JSONObject(postedData);
+				
+				
 				new QueryTask("http://192.168.1.3:8000/wifi/add_fingerprint", query).execute(c);
 
-				
 				
 				textView.setText("\nQuery sent to the server!\n" + textView.getText());
 				
@@ -125,7 +126,7 @@ public class LocalizePhone extends Activity {
 			
 			
 			if (prev != 0)
-				textView.setText("Hey! Scan results are now available!\n" + "Time spent to finish the scan: " + (curr-prev) + "\n\n" + textView.getText());
+				textView.setText("Hey! Scan results are now available!\n" + "Time spent to finish the scan: " + (curr-prev) + "\n" + textView.getText());
 			else
 				textView.setText("Hey! Scan results are now available!\n\n" + textView.getText());
 				
@@ -190,31 +191,40 @@ public class LocalizePhone extends Activity {
         super.onResume();
         
         
-        final Runnable r = new Runnable()
-        {
-            public void run() 
-            {
-                scan();
-                handler.postDelayed(this, 2000);
-            }
-        };
+        wifi = (WifiManager)getSystemService(Context.WIFI_SERVICE);
+		if (wifi.isWifiEnabled()) {		
+			
+			
+			final Runnable r = new Runnable()
+	        {
+	            public void run() 
+	            {
+	                scan();
+	                handler.postDelayed(this, 2000);
+	            }
+	        };
 
-        handler.postDelayed(r, 0);
-        
+	        handler.postDelayed(r, 0);
+			
+			
+		}
+		else {
+			textView = new TextView(this);
+			textView.setTextSize(17);
+			textView.setText("Your wifi is currently turned off. To find out your location in the building, turn on wifi and then try again.");
+			setContentView(textView);
+		} 
 	}
+	
 	
 	
 	
 	public void scan() {
 		
-		wifi = (WifiManager)getSystemService(Context.WIFI_SERVICE);
-		if (wifi.isWifiEnabled()) {
-			if (wifi.startScan()) { }
-			else 
-				textView.setText("Scanning failed!");
+		if (wifi.startScan()) { }
+		else {
+			Log.d("SCANNING_FAILURE","Wifi is turned off!");
 		}
-		else 
-			textView.setText("Your wifi is currently turned off. To find out your location in the building, turn on wifi then try again.");
 	}
 	
 	
@@ -234,8 +244,6 @@ public class LocalizePhone extends Activity {
         
         
         protected Void doInBackground(Context... c) {
-        	//HttpURLConnection conn;
-			//OutputStream os;
 			byte[] data = json.toString().getBytes();
 		
 			try {
@@ -245,16 +253,30 @@ public class LocalizePhone extends Activity {
 				
 				HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
 				   try {
+					 urlConnection.setReadTimeout( 10000 /*milliseconds*/ );
+					 urlConnection.setConnectTimeout( 15000 /* milliseconds */ );
+					   
+					 urlConnection.setDoInput(true);
 				     urlConnection.setDoOutput(true);
-				     urlConnection.setChunkedStreamingMode(0);
+				     urlConnection.setFixedLengthStreamingMode(data.length);
+				     
+				     urlConnection.setRequestProperty("content-type","application/json; charset=utf-8");
+				     urlConnection.setRequestProperty("Accept", "application/json");
+				     urlConnection.setRequestMethod("POST");
 
+				     urlConnection.connect();
 				     OutputStream out = new BufferedOutputStream(urlConnection.getOutputStream());
-				     //writeStream(out);
+			
 				     out.write(data);
+				     Log.d("DATA", json.toString());
 				     out.flush();
+				     
 				     
 				     InputStream in = new BufferedInputStream(urlConnection.getInputStream());
 				     readStream(in);
+				     
+				     in.close();
+				     out.close();
 				   }
 				    finally {
 				     urlConnection.disconnect();
@@ -263,7 +285,7 @@ public class LocalizePhone extends Activity {
 				Log.d("URLEXCEPTION","SUCCESS!");
 			}
 			catch (MalformedURLException e){ }
-			catch (IOException e){Log.d("URLEXCEPTION","FAILURE!"+ e.getMessage()); }
+			catch (IOException e) {Log.d("URLEXCEPTION","FAILURE!"+ e.getMessage()); }
 			
 			return null;
         }
