@@ -101,18 +101,20 @@ public class LocalizePhone extends Activity {
 				Collections.sort(scanResults, new ScanComparable());
 			
 				for (ScanResult scan : scanResults) {
-					macRSSI.put(scan.BSSID.toString(), scan.level);
+					int linearLevel = WifiManager.calculateSignalLevel(scan.level, 99);
+					
+					macRSSI.put(scan.BSSID.toString(), scan.level*100-linearLevel);
 					textView.append("\n\n" + scan.SSID.toString() + " " + scan.BSSID.toString() + " " + macRSSI.get(scan.BSSID.toString()));
 				}
 				
 				
 				
 				queryCore = new JSONObject(macRSSI);
-				postedData.put("1", queryCore);
+				postedData.put("fingerprint_data", queryCore);
 				query = new JSONObject(postedData);
 				
 				
-				new QueryTask("http://192.168.1.3:8000/wifi/add_fingerprint", query).execute(c);
+				new QueryTask("http://10.10.65.146:8000/wifi/add_fingerprint", query).execute(c);
 
 				
 				textView.setText("\nQuery sent to the server!\n" + textView.getText());
