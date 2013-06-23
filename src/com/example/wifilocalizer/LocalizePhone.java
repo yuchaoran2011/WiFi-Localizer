@@ -3,12 +3,16 @@ package com.example.wifilocalizer;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.text.SimpleDateFormat;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
@@ -24,19 +28,23 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.hardware.Camera;
+import android.hardware.Camera.PictureCallback;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.support.v4.app.NavUtils;
-import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
+import android.widget.FrameLayout;
 import android.widget.TextView;
-
 
 
 
@@ -56,16 +64,34 @@ public class LocalizePhone extends Activity {
 	
 	@SuppressLint("NewApi")
 	
-	TextView textView;
-	WifiManager wifi;
 	
+	public static final int MEDIA_TYPE_IMAGE = 1;
+	public static final int MEDIA_TYPE_VIDEO = 2;
+	
+
+	
+	TextView textView;
+	private WifiManager wifi;
+	
+	
+	private Camera camera;
+	private CameraPreview mPreview;
 
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
-			
+		
+		
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_localize_phone);
+		
+		
+		
+		camera = getCameraInstance();
+		mPreview = new CameraPreview(this, camera);
+        FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
+        preview.addView(mPreview);
+        //camera.startPreview();
 		
 		
 		
@@ -73,22 +99,28 @@ public class LocalizePhone extends Activity {
 		i.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
 		registerReceiver(new BroadcastReceiver(){
 			
-		long prev = 0;
+		//long prev = 0;
+		
+		
 		
 		@Override
 		public void onReceive(Context c, Intent i){
 		// Code to execute when SCAN_RESULTS_AVAILABLE_ACTION event occurs
 			
-			Date d = new Date();
-			long curr = d.getTime();
+			//textView = new TextView(c);
+			//textView.setMovementMethod(new ScrollingMovementMethod());
+			//textView.setTextSize(16);
+			
+		
+			
+			
+			//Date d = new Date();
+			//long curr = d.getTime();
 			JSONObject query, queryCore;
 			
 			HashMap<String,Integer> macRSSI = new HashMap<String,Integer>();
 			HashMap<String, JSONObject> postedData = new HashMap<String, JSONObject>();
 			
-			textView = new TextView(c);
-			textView.setMovementMethod(new ScrollingMovementMethod());
-			textView.setTextSize(16);
 			
 			List<ScanResult> scanResults = wifi.getScanResults();
 			
@@ -104,7 +136,7 @@ public class LocalizePhone extends Activity {
 					int linearLevel = WifiManager.calculateSignalLevel(scan.level, 99);
 					
 					macRSSI.put(scan.BSSID.toString(), scan.level*100-linearLevel);
-					textView.append("\n\n" + scan.SSID.toString() + " " + scan.BSSID.toString() + " " + macRSSI.get(scan.BSSID.toString()));
+					//textView.append("\n\n" + scan.SSID.toString() + " " + scan.BSSID.toString() + " " + macRSSI.get(scan.BSSID.toString()));
 				}
 				
 				
@@ -114,29 +146,32 @@ public class LocalizePhone extends Activity {
 				query = new JSONObject(postedData);
 				
 				
-				new QueryTask("http://10.10.65.146:8000/wifi/add_fingerprint", query).execute(c);
+				new QueryTask("http://10.10.65.58:8000/wifi/add_fingerprint", query).execute(c);
 
 				
+				
+				/*
 				textView.setText("\nQuery sent to the server!\n" + textView.getText());
 				
 				
 				textView.setText("\nCurrent System Timestamp: " + d.getTime() + " " 
 				+ "\nNumber of Access Points detected: " + macRSSI.size() + "\n\nSignature (Ordered by RSSI values from strongest to weakest): "
-						+ textView.getText());
+						+ textView.getText());*/
 			
 				}
 			
-			
+			/*
 			if (prev != 0)
 				textView.setText("Hey! Scan results are now available!\n" + "Time spent to finish the scan: " + (curr-prev) + "\n" + textView.getText());
 			else
-				textView.setText("Hey! Scan results are now available!\n\n" + textView.getText());
+				textView.setText("Hey! Scan results are now available!\n\n" + textView.getText());*/
 				
-			prev = curr;
+			//prev = curr;
 			
+			/*
 			textView.setMovementMethod(new ScrollingMovementMethod());
 			textView.setTextSize(16);	
-			setContentView(textView);
+			setContentView(textView);*/
 			}
 		}
 	,i);
@@ -192,30 +227,44 @@ public class LocalizePhone extends Activity {
     protected void onResume() {
         super.onResume();
         
+        /*
+        camera = getCameraInstance();
+        mPreview = new CameraPreview(this, camera);
+        FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
+        preview.addView(mPreview);
+        */
+        
         
         wifi = (WifiManager)getSystemService(Context.WIFI_SERVICE);
-		if (wifi.isWifiEnabled()) {		
-			
-			
+		if (wifi.isWifiEnabled()) {			
+		
 			final Runnable r = new Runnable()
 	        {
 	            public void run() 
 	            {
+	            	camera.startPreview();
 	                scan();
+	                camera.takePicture(null, null, mPicture);
+	                camera.startPreview();
 	                handler.postDelayed(this, 2000);
+	                //camera.release();
+	                
 	            }
 	        };
 
 	        handler.postDelayed(r, 0);
 			
 			
-		}
+		}/*
 		else {
 			textView = new TextView(this);
 			textView.setTextSize(17);
 			textView.setText("Your wifi is currently turned off. To find out your location in the building, turn on wifi and then try again.");
 			setContentView(textView);
-		} 
+		}*/
+		
+		
+		
 	}
 	
 	
@@ -225,7 +274,7 @@ public class LocalizePhone extends Activity {
 		
 		if (wifi.startScan()) { }
 		else {
-			Log.d("SCANNING_FAILURE","Wifi is turned off!");
+			Log.d("SCANNING_FAILURE","Wi-Fi is turned off!");
 		}
 	}
 	
@@ -310,5 +359,165 @@ public class LocalizePhone extends Activity {
             }
         }
     }
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	/*******    Camera Code     ********/
+	/*******   Obtained from http://developer.android.com/guide/topics/media/camera.html    ********/
+	
+	/** Check if this device has a camera 
+	private boolean checkCameraHardware(Context context) {
+	    if (context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA)){
+	        // this device has a camera
+	        return true;
+	    } else {
+	        // no camera on this device
+	        return false;
+	    }
+	}*/
+	
+	
+	
+	/** A safe way to get an instance of the Camera object. */
+	public static Camera getCameraInstance(){
+	    Camera c = null;
+	    try {
+	        c = Camera.open(); // attempt to get a Camera instance
+	    }
+	    catch (Exception e){
+	        // Camera is not available (in use or does not exist)
+	    }
+	    return c; // returns null if camera is unavailable
+	}
+	
+	
+	
+	/** A basic Camera preview class */
+	public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback {
+	    private SurfaceHolder mHolder;
+	    private Camera mCamera;
+
+	    public CameraPreview(Context context, Camera camera) {
+	        super(context);
+	        mCamera = camera;
+
+	        // Install a SurfaceHolder.Callback so we get notified when the
+	        // underlying surface is created and destroyed.
+	        mHolder = getHolder();
+	        mHolder.addCallback(this);
+	    }
+
+	    public void surfaceCreated(SurfaceHolder holder) {
+	        // The Surface has been created, now tell the camera where to draw the preview.
+	        try {
+	            mCamera.setPreviewDisplay(holder);
+	            mCamera.startPreview();
+	        } catch (IOException e) {
+	            Log.d("TAG1: ", "Error setting camera preview: " + e.getMessage());
+	        }
+	    }
+
+	    public void surfaceDestroyed(SurfaceHolder holder) {
+	        // empty. Take care of releasing the Camera preview in your activity.
+	    }
+
+	    public void surfaceChanged(SurfaceHolder holder, int format, int w, int h) {
+	        // If your preview can change or rotate, take care of those events here.
+	        // Make sure to stop the preview before resizing or reformatting it.
+
+	        if (mHolder.getSurface() == null){
+	          // preview surface does not exist
+	          return;
+	        }
+
+	        // stop preview before making changes
+	        try {
+	            mCamera.stopPreview();
+	        } catch (Exception e){
+	          // ignore: tried to stop a non-existent preview
+	        }
+
+	        // set preview size and make any resize, rotate or
+	        // reformatting changes here
+
+	        // start preview with new settings
+	        try {
+	            mCamera.setPreviewDisplay(mHolder);
+	            mCamera.startPreview();
+
+	        } catch (Exception e){
+	            Log.d("TAG2: ", "Error starting camera preview: " + e.getMessage());
+	        }
+	    }
+	}
+	
+	
+	
+	
+	@SuppressWarnings("unused")
+	private PictureCallback mPicture = new PictureCallback() {
+
+	    @Override
+	    public void onPictureTaken(byte[] data, Camera camera) {
+
+	        File pictureFile = getOutputMediaFile(MEDIA_TYPE_IMAGE);
+	        if (pictureFile == null){
+	            Log.d("TAG3: ", "Error creating media file, check storage permissions!");
+	            return;
+	        }
+
+	        try {
+	            FileOutputStream fos = new FileOutputStream(pictureFile);
+	            fos.write(data);
+	            fos.close();
+	        } catch (FileNotFoundException e) {
+	            Log.d("TAG4: ", "File not found: " + e.getMessage());
+	        } catch (IOException e) {
+	            Log.d("TAG5: ", "Error accessing file: " + e.getMessage());
+	        }
+	    }
+	};
+	
+	
+	
+	/** Create a File for saving an image or video */
+	private static File getOutputMediaFile(int type){
+	    // To be safe, you should check that the SDCard is mounted
+	    // using Environment.getExternalStorageState() before doing this.
+
+	    File mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(
+	              Environment.DIRECTORY_PICTURES), "MyCameraApp");
+	    // This location works best if you want the created images to be shared
+	    // between applications and persist after your app has been uninstalled.
+
+	    // Create the storage directory if it does not exist
+	    if (! mediaStorageDir.exists()){
+	        if (! mediaStorageDir.mkdirs()){
+	            Log.d("LocalizingImages", "failed to create directory");
+	            return null;
+	        }
+	    }
+
+	    // Create a media file name
+	    String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+	    File mediaFile;
+	    if (type == MEDIA_TYPE_IMAGE){
+	        mediaFile = new File(mediaStorageDir.getPath() + File.separator +
+	        "IMG_"+ timeStamp + ".jpg");
+	    } else if(type == MEDIA_TYPE_VIDEO) {
+	        mediaFile = new File(mediaStorageDir.getPath() + File.separator +
+	        "VID_"+ timeStamp + ".mp4");
+	    } else {
+	        return null;
+	    }
+
+	    return mediaFile;
+	}
 	
 }

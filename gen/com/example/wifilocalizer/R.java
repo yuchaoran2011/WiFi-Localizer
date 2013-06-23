@@ -28,9 +28,10 @@ public final class R {
         public static final int sample=0x7f020004;
     }
     public static final class id {
-        public static final int action_settings=0x7f080002;
-        public static final int image=0x7f080001;
-        public static final int imageView1=0x7f080000;
+        public static final int action_settings=0x7f080003;
+        public static final int camera_preview=0x7f080000;
+        public static final int image=0x7f080002;
+        public static final int imageView1=0x7f080001;
     }
     public static final class layout {
         public static final int activity_display_message=0x7f030000;

@@ -13,7 +13,7 @@ public final class R {
 		public static final int sample = 0x7f020004;
 	}
 	public static final class id {
-		public static final int image = 0x7f080001;
+		public static final int image = 0x7f080002;
 	}
 	public static final class layout {
 		public static final int main = 0x7f030004;
