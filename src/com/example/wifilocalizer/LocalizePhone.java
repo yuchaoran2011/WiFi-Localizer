@@ -30,6 +30,10 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.hardware.Camera;
 import android.hardware.Camera.PictureCallback;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
@@ -60,7 +64,7 @@ class ScanComparable implements Comparator<ScanResult> {
 
 
 
-public class LocalizePhone extends Activity {
+public class LocalizePhone extends Activity implements SensorEventListener {
 	
 	@SuppressLint("NewApi")
 	
@@ -68,15 +72,35 @@ public class LocalizePhone extends Activity {
 	public static final int MEDIA_TYPE_IMAGE = 1;
 	public static final int MEDIA_TYPE_VIDEO = 2;
 	
-
+	
+	/* Constants used to process gyroscope data
+	// Create a constant to convert nanoseconds to seconds.
+	private static final float NS2S = 1.0f / 1000000000.0f;
+	
+	private float timestamp;
+	private double EPSILON = 0.1;
+	*/
+	
 	
 	TextView textView;
+	
+	
 	private WifiManager wifi;
-	
-	
 	private Camera camera;
 	private CameraPreview mPreview;
+	private SensorManager mSensorManager;
+	private Sensor linearAccelerometer, rotationSensor;
+	
+	
+	private float[] linearAcceleration = new float[4];
+	private float[] globalDeltaRotationVector = {0, 0, 0, 0};
+	private float[] globalAcceleration = {0, 0, 0, 0};
+	
+	private float[] rotationMatrix = new float[16];
+	private float[] newRotationVector = new float[3], oldRotationVector = new float[3], deltaRotationVector = new float[4];
+	
 
+	
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -91,9 +115,14 @@ public class LocalizePhone extends Activity {
 		mPreview = new CameraPreview(this, camera);
         FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
         preview.addView(mPreview);
-        //camera.startPreview();
-		
-		
+        
+        
+        
+        mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+        
+        linearAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
+        rotationSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
+        
 		
 		IntentFilter i = new IntentFilter();
 		i.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
@@ -164,18 +193,19 @@ public class LocalizePhone extends Activity {
 			if (prev != 0)
 				textView.setText("Hey! Scan results are now available!\n" + "Time spent to finish the scan: " + (curr-prev) + "\n" + textView.getText());
 			else
-				textView.setText("Hey! Scan results are now available!\n\n" + textView.getText());*/
+				textView.setText("Hey! Scan results are now available!\n\n" + textView.getText());
 				
-			//prev = curr;
+			prev = curr;
+			*/
 			
 			/*
 			textView.setMovementMethod(new ScrollingMovementMethod());
 			textView.setTextSize(16);	
-			setContentView(textView);*/
+			setContentView(textView);
+			*/
 			}
 		}
-	,i);
-	    	
+	,i);    	
 			
 			
 		// Show the Up button in the action bar.
@@ -227,12 +257,11 @@ public class LocalizePhone extends Activity {
     protected void onResume() {
         super.onResume();
         
-        /*
-        camera = getCameraInstance();
-        mPreview = new CameraPreview(this, camera);
-        FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
-        preview.addView(mPreview);
-        */
+        
+        mSensorManager.registerListener(this, linearAccelerometer, SensorManager.SENSOR_DELAY_FASTEST);
+        mSensorManager.registerListener(this, rotationSensor, SensorManager.SENSOR_DELAY_FASTEST);
+        
+        //timestamp = System.currentTimeMillis();
         
         
         wifi = (WifiManager)getSystemService(Context.WIFI_SERVICE);
@@ -244,8 +273,8 @@ public class LocalizePhone extends Activity {
 	            {
 	            	camera.startPreview();
 	                scan();
-	                camera.takePicture(null, null, mPicture);
-	                camera.startPreview();
+	                //camera.takePicture(null, null, mPicture);
+	                //camera.startPreview();
 	                handler.postDelayed(this, 2000);
 	                //camera.release();
 	                
@@ -255,13 +284,13 @@ public class LocalizePhone extends Activity {
 	        handler.postDelayed(r, 0);
 			
 			
-		}/*
+		}
 		else {
 			textView = new TextView(this);
 			textView.setTextSize(17);
 			textView.setText("Your wifi is currently turned off. To find out your location in the building, turn on wifi and then try again.");
 			setContentView(textView);
-		}*/
+		}
 		
 		
 		
@@ -362,6 +391,16 @@ public class LocalizePhone extends Activity {
 	
 	
 	
+	protected void onPause() {
+		super.onPause();
+		
+		mSensorManager.unregisterListener(this, linearAccelerometer);
+		mSensorManager.unregisterListener(this, rotationSensor);
+	}
+	
+	
+	
+	
 	
 	
 	
@@ -369,7 +408,6 @@ public class LocalizePhone extends Activity {
 	
 	
 	/*******    Camera Code     ********/
-	/*******   Obtained from http://developer.android.com/guide/topics/media/camera.html    ********/
 	
 	/** Check if this device has a camera 
 	private boolean checkCameraHardware(Context context) {
@@ -492,7 +530,7 @@ public class LocalizePhone extends Activity {
 	    // using Environment.getExternalStorageState() before doing this.
 
 	    File mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(
-	              Environment.DIRECTORY_PICTURES), "MyCameraApp");
+	              Environment.DIRECTORY_PICTURES), "LocalizingImages");
 	    // This location works best if you want the created images to be shared
 	    // between applications and persist after your app has been uninstalled.
 
@@ -520,4 +558,161 @@ public class LocalizePhone extends Activity {
 	    return mediaFile;
 	}
 	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	/*****    Sensor Code    ****/
+	
+	public final void onAccuracyChanged(Sensor sensor, int accuracy) {
+	    // Do something here if sensor accuracy changes.
+	  }
+	
+	
+	
+	public void onSensorChanged(SensorEvent event){
+		int type = event.sensor.getType();
+		
+		/*
+		if (type == Sensor.TYPE_ACCELEROMETER) {
+		
+		  // In this example, alpha is calculated as t / (t + dT),
+		  // where t is the low-pass filter's time-constant and
+		  // dT is the event delivery rate.
+
+		  final float alpha = (float)0.8;
+
+		  // Isolate the force of gravity with the low-pass filter.
+		  gravity[0] = alpha * gravity[0] + (1 - alpha) * event.values[0];
+		  gravity[1] = alpha * gravity[1] + (1 - alpha) * event.values[1];
+		  gravity[2] = alpha * gravity[2] + (1 - alpha) * event.values[2];
+
+		  // Remove the gravity contribution with the high-pass filter.
+		  linearAcceleration[0] = event.values[0] - gravity[0];
+		  linearAcceleration[1] = event.values[1] - gravity[1];
+		  linearAcceleration[2] = event.values[2] - gravity[2];
+		  //Log.d("Acceleration", linearAcceleration[0] + " " + linearAcceleration[1] + " " + linearAcceleration[2]);
+		}*/
+		
+		
+		
+		
+		if (type == Sensor.TYPE_LINEAR_ACCELERATION) {
+			linearAcceleration[0] = event.values[0];
+			linearAcceleration[1] = event.values[1];
+			linearAcceleration[2] = event.values[2];
+			linearAcceleration[3] = 0;
+		}	
+	   
+		
+	   else if (type == Sensor.TYPE_ROTATION_VECTOR) {
+		   newRotationVector = event.values.clone();
+		   if (oldRotationVector != null) {
+			   deltaRotationVector[0] = newRotationVector[0] - oldRotationVector[0];
+			   deltaRotationVector[1] = newRotationVector[1] - oldRotationVector[1];
+			   deltaRotationVector[2] = newRotationVector[2] - oldRotationVector[2];
+			   deltaRotationVector[3] = 0;
+			   Log.d("DELTA_ROTATION", deltaRotationVector[0] + " " + deltaRotationVector[1] + " " + deltaRotationVector[2]);
+		   }
+		   SensorManager.getRotationMatrixFromVector(rotationMatrix, newRotationVector);
+		   for (int i=0;i<4;i++) {
+			   globalDeltaRotationVector[i] = (float)0.0;
+			   globalAcceleration[i] = (float)0.0;
+           }
+           
+           for (int i=0;i<4;i++) {
+        	   for (int j=0;j<4;j++) {
+        		   globalDeltaRotationVector[i] += rotationMatrix[(i+1)*(j+1)-1] * deltaRotationVector[i];
+        		   globalAcceleration[i] += rotationMatrix[(i+1)*(j+1)-1] * linearAcceleration[i];
+        	   }
+           }
+           Log.d("GLOBAL_ACCELERATION", globalAcceleration[0] + " " + globalAcceleration[1] + " " + globalAcceleration[2]);
+           oldRotationVector[0] = newRotationVector[0];
+           oldRotationVector[1] = newRotationVector[1];
+           oldRotationVector[2] = newRotationVector[2];
+	   }
+		
+		
+		
+		
+		
+		/*
+	   else if (type == Sensor.TYPE_MAGNETIC_FIELD) {
+		   magneticField = new float[3];
+		   magneticField = event.values.clone();
+	   }*/	
+		
+		/*
+	   else if (type == Sensor.TYPE_GYROSCOPE) {
+		// This timestep's delta rotation to be multiplied by the current rotation
+		   // after computing it from the gyro sample data.
+		   if (timestamp != 0) {
+		     final float dT = (event.timestamp - timestamp) * NS2S;
+		     // Axis of the rotation sample, not normalized yet.
+		     float axisX = event.values[0];
+		     float axisY = event.values[1];
+		     float axisZ = event.values[2];
+
+		     // Calculate the angular speed of the sample
+		     float omegaMagnitude = (float)Math.sqrt(axisX*axisX + axisY*axisY + axisZ*axisZ);
+
+		     // Normalize the rotation vector if it's big enough to get the axis
+		     // (that is, EPSILON should represent your maximum allowable margin of error)
+		     if (omegaMagnitude > EPSILON) {
+		       axisX /= omegaMagnitude;
+		       axisY /= omegaMagnitude;
+		       axisZ /= omegaMagnitude;
+		     }
+
+		     // Integrate around this axis with the angular speed by the timestep
+		     // in order to get a delta rotation from this sample over the timestep
+		     // We will convert this axis-angle representation of the delta rotation
+		     // into a quaternion before turning it into the rotation matrix.
+		     float thetaOverTwo = omegaMagnitude * dT / 2.0f;
+		     float sinThetaOverTwo = (float)Math.sin(thetaOverTwo);
+		     float cosThetaOverTwo = (float)Math.cos(thetaOverTwo);
+		     deltaRotationVector[0] = sinThetaOverTwo * axisX;
+		     deltaRotationVector[1] = sinThetaOverTwo * axisY;
+		     deltaRotationVector[2] = sinThetaOverTwo * axisZ;
+		     deltaRotationVector[3] = cosThetaOverTwo;
+		     
+		     //Log.d("LOCAL_ROTATION", deltaRotationVector[0] + " " + deltaRotationVector[1] + " " + deltaRotationVector[2]);
+		   }
+		   timestamp = event.timestamp;
+		   //float[] deltaRotationMatrix = new float[9];
+		   //SensorManager.getRotationMatrixFromVector(deltaRotationMatrix, deltaRotationVector);
+			     // User code should concatenate the delta rotation we computed with the current rotation
+			     // in order to get the updated rotation.
+			     // rotationCurrent = rotationCurrent * deltaRotationMatrix;
+	   }*/
+	   
+		
+	
+		/*
+		if (magneticField != null && !(linearAcceleration[0] == 0.0 && linearAcceleration[1] == 0.0 && linearAcceleration[2] == 0.0)) {
+            float[] R = new float[16];
+            float[] I = new float[16];
+            SensorManager.getRotationMatrix(R, I, linearAcceleration, magneticField);
+            
+            for (int i=0;i<4;i++) {
+            	globalDeltaRotationVector[i] = (float)0.0;
+            	globalAcceleration[i] = (float)0.0;
+            }
+            
+            for (int i=0;i<4;i++) {
+            	for (int j=0;j<4;j++) {
+            	globalDeltaRotationVector[i] += R[(i+1)*(j+1)-1] * deltaRotationVector[i];
+            	if (i<3)
+            		globalAcceleration[i] += R[(i+1)*(j+1)-1] * linearAcceleration[i];
+            	}
+            }
+            //Log.d("GLOBAL_ROTATION", globalDeltaRotationVector[0] + " " + globalDeltaRotationVector[1] + " " + globalDeltaRotationVector[2]);
+            Log.d("GLOBAL_ACCELERATION", globalAcceleration[0] + " " + globalAcceleration[1] + " " + globalAcceleration[2]);
+        }*/
+	 }
 }
