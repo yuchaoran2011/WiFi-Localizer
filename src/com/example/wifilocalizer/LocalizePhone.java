@@ -28,9 +28,9 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.hardware.Camera;
 import android.hardware.Camera.PictureCallback;
-import android.hardware.Camera.PreviewCallback;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -150,10 +150,15 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 			//Date d = new Date();
 			//long curr = d.getTime();
 			JSONObject query, queryCore;
+			@SuppressWarnings("unused")
+			JSONObject params, pose, returnParams;
 			
 			HashMap<String,Integer> macRSSI = new HashMap<String,Integer>();
 			HashMap<String, JSONObject> postedData = new HashMap<String, JSONObject>();
-			
+			HashMap<String, Float> poseMap = new HashMap<String, Float>();
+			HashMap<String, Boolean> returnMap = new HashMap<String, Boolean>();
+			HashMap<String, Object> paramsMap = new HashMap<String, Object>();
+  			
 			
 			List<ScanResult> scanResults = wifi.getScanResults();
 			
@@ -179,7 +184,35 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				query = new JSONObject(postedData);
 				
 				
-				new QueryTask("http://10.10.65.58:8000/wifi/add_fingerprint", query).execute(c);
+				
+				poseMap.put("latitude", (float)0.0);
+				poseMap.put("longitude", (float)0.0);
+				poseMap.put("altitude", (float)0.0);
+				poseMap.put("yaw", cameraPose[0]);
+				poseMap.put("pitch", cameraPose[1]);
+				poseMap.put("roll", cameraPose[2]);
+				poseMap.put("ambiguity_meters", (float)1.0e+126);
+				pose = new JSONObject(poseMap);
+
+				returnMap.put("statistics", true);
+				returnMap.put("image_data", true);
+				returnMap.put("estimated_client_pose", true);
+				returnMap.put("pose_visualization_only", false);
+				returnParams = new JSONObject(returnMap);
+				
+				paramsMap.put("method", "client_query");
+				paramsMap.put("user", "test");
+				paramsMap.put("database", "CoryHall");
+				paramsMap.put("deadline_seconds", 2.0);
+				paramsMap.put("disable_gpu", false);
+				paramsMap.put("perfmode", "fast");
+				paramsMap.put("pose", pose);
+				paramsMap.put("return", returnParams);
+				
+				params = new JSONObject(paramsMap);	
+				
+							
+				new QueryTask("http://192.168.1.141:8000/wifi/add_fingerprint", query).execute(c);
 
 				
 				
@@ -191,7 +224,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				+ "\nNumber of Access Points detected: " + macRSSI.size() + "\n\nSignature (Ordered by RSSI values from strongest to weakest): "
 						+ textView.getText());*/
 			
-				}
+			}
 			
 			/*
 			if (prev != 0)
@@ -277,8 +310,8 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	            	camera.startPreview();
 	                scan();
 	                timestamp = System.currentTimeMillis();
-	                //camera.takePicture(null, null, mPicture);
-	                //camera.startPreview();
+	                camera.takePicture(null, null, mPicture);
+	                camera.startPreview();
 	                handler.postDelayed(this, 2000);
 	                //camera.release();
 	                
@@ -292,7 +325,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 		else {
 			textView = new TextView(this);
 			textView.setTextSize(17);
-			textView.setText("Your wifi is currently turned off. To find out your location in the building, turn on wifi and then try again.");
+			textView.setText("Wi-Fi is currently turned off. To find out your location in the building, turn Wi-Fi on and then try again.");
 			setContentView(textView);
 		}
 		
@@ -366,10 +399,10 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				     urlConnection.disconnect();
 				    }
 				  
-				Log.d("URLEXCEPTION","SUCCESS!");
+				Log.d("URL_CONNECTION","SUCCESS!");
 			}
 			catch (MalformedURLException e){ }
-			catch (IOException e) {Log.d("URLEXCEPTION","FAILURE!"+ e.getMessage()); }
+			catch (IOException e) {Log.d("URL_EXCEPTION","FAILURE!"+ e.getMessage()); }
 			
 			return null;
         }
@@ -413,7 +446,8 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	
 	/*******    Camera Code     ********/
 	
-	/** Check if this device has a camera 
+	/* Check if this device has a camera */
+	@SuppressWarnings("unused")
 	private boolean checkCameraHardware(Context context) {
 	    if (context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA)){
 	        // this device has a camera
@@ -422,7 +456,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	        // no camera on this device
 	        return false;
 	    }
-	}*/
+	}
 	
 	
 	
@@ -457,13 +491,13 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 
 	    public void surfaceCreated(SurfaceHolder holder) {
 	        // The Surface has been created, now tell the camera where to draw the preview.
-	    	/*
+	    	
 	        try {
 	            mCamera.setPreviewDisplay(holder);
 	            mCamera.startPreview();
 	        } catch (IOException e) {
 	            Log.d("TAG1: ", "Error setting camera preview: " + e.getMessage());
-	        }*/
+	        }/*
 	        mCamera.setDisplayOrientation(90);
 	        try {
 	        	mCamera.setPreviewDisplay(holder);
@@ -476,7 +510,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 
 	        } catch (Exception e) {
 	        	e.printStackTrace();
-	        }
+	        }*/
 	    }
 
 	    public void surfaceDestroyed(SurfaceHolder holder) {
@@ -516,7 +550,6 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	
 	
 	
-	@SuppressWarnings("unused")
 	private PictureCallback mPicture = new PictureCallback() {
 
 	    @Override
