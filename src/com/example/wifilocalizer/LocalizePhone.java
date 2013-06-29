@@ -42,6 +42,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.StrictMode;
 import android.support.v4.app.NavUtils;
 import android.util.Log;
 import android.view.Menu;
@@ -102,23 +103,39 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	
 	private float[] cameraPose = new float[3];
 	
+	private boolean DEVELOPER_MODE = true, mAppStopped;
 	
+	private BroadcastReceiver receiver;
 
 	
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
+		if (DEVELOPER_MODE) {
+	         StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder()
+	                 .detectDiskReads()
+	                 .detectDiskWrites()
+	                 .detectNetwork()   // or .detectAll() for all detectable problems
+	                 .penaltyLog()
+	                 .build());
+	         StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder()
+	                 .detectLeakedSqlLiteObjects()
+	                 .detectLeakedClosableObjects()
+	                 .penaltyLog()
+	                 .penaltyDeath()
+	                 .build());
+	     }
 		
 		
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_localize_phone);
 		
 		
-		
+		/*
 		camera = getCameraInstance();
 		mPreview = new CameraPreview(this, camera);
         FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
-        preview.addView(mPreview);
+        preview.addView(mPreview);*/
         
         
         
@@ -130,7 +147,8 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 		
 		IntentFilter i = new IntentFilter();
 		i.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
-		registerReceiver(new BroadcastReceiver(){
+		
+		registerReceiver(receiver = new BroadcastReceiver(){
 			
 		//long prev = 0;
 		
@@ -212,7 +230,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				params = new JSONObject(paramsMap);	
 				
 							
-				new QueryTask("http://192.168.1.141:8000/wifi/add_fingerprint", query).execute(c);
+				new WifiQueryTask("http://192.168.1.141:8000/wifi/add_fingerprint", query).execute(c);
 
 				
 				
@@ -294,6 +312,13 @@ public class LocalizePhone extends Activity implements SensorEventListener {
     protected void onResume() {
         super.onResume();
         
+        camera = getCameraInstance();
+		mPreview = new CameraPreview(this, camera);
+        FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
+        preview.addView(mPreview);
+        
+        
+        mAppStopped = false; 
         
         mSensorManager.registerListener(this, linearAccelerometer, SensorManager.SENSOR_DELAY_FASTEST);
         mSensorManager.registerListener(this, rotationSensor, SensorManager.SENSOR_DELAY_FASTEST);
@@ -301,24 +326,27 @@ public class LocalizePhone extends Activity implements SensorEventListener {
         
         
         wifi = (WifiManager)getSystemService(Context.WIFI_SERVICE);
-		if (wifi.isWifiEnabled()) {			
-		
+        
+		if (wifi.isWifiEnabled()) {
+			
 			final Runnable r = new Runnable()
 	        {
 	            public void run() 
 	            {
+	            	if(!mAppStopped) {
 	            	camera.startPreview();
 	                scan();
 	                timestamp = System.currentTimeMillis();
 	                camera.takePicture(null, null, mPicture);
 	                camera.startPreview();
 	                handler.postDelayed(this, 2000);
-	                //camera.release();
+	                }
 	                
 	            }
 	        };
 
-	        handler.postDelayed(r, 0);
+			handler.postDelayed(r, 0);
+	        
 			
 			
 		}
@@ -348,12 +376,12 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 
 	
 	
-	private class QueryTask extends AsyncTask<Context, Void, Void> 
+	private class WifiQueryTask extends AsyncTask<Context, Void, Void> 
     {
         private String url_str;
         private JSONObject json;
 
-        public QueryTask(String url, JSONObject json)
+        public WifiQueryTask(String url, JSONObject json)
         {
             this.url_str = url;
             this.json = json;
@@ -429,12 +457,16 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	
 	
 	protected void onPause() {
-		super.onPause();
+		mAppStopped = true;
+		camera.stopPreview();
+		camera.release();
+		
+		super.onPause();	
 		
 		mSensorManager.unregisterListener(this, linearAccelerometer);
 		mSensorManager.unregisterListener(this, rotationSensor);
+		unregisterReceiver(receiver);
 	}
-	
 	
 	
 	
@@ -671,7 +703,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 			   deltaRotationVector[1] = newRotationVector[1] - oldRotationVector[1];
 			   deltaRotationVector[2] = newRotationVector[2] - oldRotationVector[2];
 			   deltaRotationVector[3] = 0;
-			   //Log.d("DELTA_ROTATION", deltaRotationVector[0] + " " + deltaRotationVector[1] + " " + deltaRotationVector[2]);
+			   Log.d("DELTA_ROTATION", deltaRotationVector[0] + " " + deltaRotationVector[1] + " " + deltaRotationVector[2]);
 		   }
 		   SensorManager.getRotationMatrixFromVector(rotationMatrix, newRotationVector);
 		   
@@ -682,7 +714,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 			   cameraPose[0] = (float) Math.round(Math.toDegrees(orientation[2])*1000)/1000;
 			   cameraPose[1] = (float) Math.round(Math.toDegrees(orientation[1])*1000)/1000;
 			   cameraPose[2] = (float) Math.round(Math.toDegrees(orientation[0])*1000)/1000;
-			   //Log.d("ORIENTATION", cameraPose[0]+" "+cameraPose[1]+" "+cameraPose[2]);
+			   Log.d("ORIENTATION", cameraPose[0]+" "+cameraPose[1]+" "+cameraPose[2]);
 		   }
 		   
 		   
@@ -698,7 +730,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
         		   globalAcceleration[i] += rotationMatrix[(i+1)*(j+1)-1] * linearAcceleration[i];
         	   }
            }
-           //Log.d("GLOBAL_ACCELERATION", globalAcceleration[0] + " " + globalAcceleration[1] + " " + globalAcceleration[2]);
+           Log.d("GLOBAL_ACCELERATION", globalAcceleration[0] + " " + globalAcceleration[1] + " " + globalAcceleration[2]);
            oldRotationVector[0] = newRotationVector[0];
            oldRotationVector[1] = newRotationVector[1];
            oldRotationVector[2] = newRotationVector[2];
