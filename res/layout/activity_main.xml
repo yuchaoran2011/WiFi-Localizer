@@ -28,7 +28,7 @@
         android:layout_weight="1.00"
         android:contentDescription="@string/map_alt"
         android:adjustViewBounds="true"
-        android:src="@drawable/path20120423" />
+        android:src="@drawable/cory_2nd_floorplan" />
         
     <Button
         android:layout_width="wrap_content"

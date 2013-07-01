@@ -8,8 +8,8 @@ package com.matabii.dev.scaleimageview;
 
 public final class R {
 	public static final class drawable {
-		public static final int icon = 0x7f020001;
-		public static final int image = 0x7f020002;
+		public static final int icon = 0x7f020002;
+		public static final int image = 0x7f020003;
 		public static final int sample = 0x7f020004;
 	}
 	public static final class id {
