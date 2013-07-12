@@ -5,6 +5,7 @@
     <string name="action_settings">Settings</string>
     <string name="button_scan">Say Hello</string>
     <string name="button_localize">Scan Wi-Fi Networks</string>
+    <string name="button_rotation_demo">Demo Rotation Vector</string>
     <string name="button_mark">Mark my location on the map</string>
     <string name="edit_message">Enter a message</string>
     <string name="map_alt">Floor plan of the building</string>
@@ -12,5 +13,6 @@
     <string name="hello_world">Hello! Wi-Fi scanning is in progress!</string>
     <string name="title_activity_localize_phone">Wi-Fi Scanning Results</string>
     <string name="title_activity_mark_on_map">MarkOnMap</string>
+    <string name="title_activity_rotation_vector_demo">Rotation Vector Demo</string>
 
 </resources>

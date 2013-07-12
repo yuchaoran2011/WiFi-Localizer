@@ -41,4 +41,9 @@ public class MainActivity extends Activity {
     	startActivity(intent);
     }
     
+    
+    public void yawTest(View view) {
+    	Intent intent = new Intent(this, RotationVectorDemo.class);
+    	startActivity(intent);
+    }
 }

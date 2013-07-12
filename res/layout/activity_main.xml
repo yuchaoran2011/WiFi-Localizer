@@ -36,6 +36,12 @@
         android:onClick="localize"
         android:text="@string/button_localize" />
     
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:onClick="yawTest"
+        android:text="@string/button_rotation_demo" />
+    
     <!--  
     <Button
         android:layout_width="wrap_content"

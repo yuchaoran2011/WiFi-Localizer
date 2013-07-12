@@ -129,6 +129,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 		
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_localize_phone);
+	
 		
 		
 		/*
@@ -317,11 +318,13 @@ public class LocalizePhone extends Activity implements SensorEventListener {
         FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
         preview.addView(mPreview);
         
+        preview.setKeepScreenOn(true);
+        
         
         mAppStopped = false; 
         
-        mSensorManager.registerListener(this, linearAccelerometer, SensorManager.SENSOR_DELAY_FASTEST);
-        mSensorManager.registerListener(this, rotationSensor, SensorManager.SENSOR_DELAY_FASTEST);
+        mSensorManager.registerListener(this, linearAccelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+        mSensorManager.registerListener(this, rotationSensor, SensorManager.SENSOR_DELAY_NORMAL);
         
         
         
@@ -703,7 +706,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 			   deltaRotationVector[1] = newRotationVector[1] - oldRotationVector[1];
 			   deltaRotationVector[2] = newRotationVector[2] - oldRotationVector[2];
 			   deltaRotationVector[3] = 0;
-			   Log.d("DELTA_ROTATION", deltaRotationVector[0] + " " + deltaRotationVector[1] + " " + deltaRotationVector[2]);
+			   //Log.d("DELTA_ROTATION", deltaRotationVector[0] + " " + deltaRotationVector[1] + " " + deltaRotationVector[2]);
 		   }
 		   SensorManager.getRotationMatrixFromVector(rotationMatrix, newRotationVector);
 		   
@@ -711,10 +714,11 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 		   
 		   if (currTimestamp >= timestamp) {
 			   SensorManager.getOrientation(rotationMatrix, orientation);
-			   cameraPose[0] = (float) Math.round(Math.toDegrees(orientation[2])*1000)/1000;
-			   cameraPose[1] = (float) Math.round(Math.toDegrees(orientation[1])*1000)/1000;
-			   cameraPose[2] = (float) Math.round(Math.toDegrees(orientation[0])*1000)/1000;
-			   Log.d("ORIENTATION", cameraPose[0]+" "+cameraPose[1]+" "+cameraPose[2]);
+			   cameraPose[0] = (float) Math.round(Math.toDegrees(orientation[2])*100)/100; // Row
+			   cameraPose[1] = (float) Math.round(Math.toDegrees(orientation[1])*100)/100; // Pitch
+			   cameraPose[2] = (float) Math.round(Math.toDegrees(orientation[0])*100)/100; // Yaw
+			   //Log.d("ORIENTATION", cameraPose[0]+" "+cameraPose[1]+" "+cameraPose[2]);
+			   Log.d("YAW", cameraPose[2] + "");
 		   }
 		   
 		   
@@ -730,7 +734,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
         		   globalAcceleration[i] += rotationMatrix[(i+1)*(j+1)-1] * linearAcceleration[i];
         	   }
            }
-           Log.d("GLOBAL_ACCELERATION", globalAcceleration[0] + " " + globalAcceleration[1] + " " + globalAcceleration[2]);
+           //Log.d("GLOBAL_ACCELERATION", globalAcceleration[0] + " " + globalAcceleration[1] + " " + globalAcceleration[2]);
            oldRotationVector[0] = newRotationVector[0];
            oldRotationVector[1] = newRotationVector[1];
            oldRotationVector[2] = newRotationVector[2];

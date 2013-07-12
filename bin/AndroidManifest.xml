@@ -12,18 +12,22 @@
     </uses-permission>
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.INTERNET" /><uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.CAMERA"/>
-    
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.CAMERA" />
+
     <uses-feature android:name="android.hardware.camera" />
-    <uses-feature android:name="android.hardware.sensor.accelerometer"
-              	  android:required="true" />
-    <uses-feature android:name="android.hardware.sensor.gyroscope"
-              	  android:required="true" />
-    <uses-feature android:name="android.hardware.sensor.compass"
-              	  android:required="true" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
-    
+    <uses-feature
+        android:name="android.hardware.sensor.accelerometer"
+        android:required="true" />
+    <uses-feature
+        android:name="android.hardware.sensor.gyroscope"
+        android:required="true" />
+    <uses-feature
+        android:name="android.hardware.sensor.compass"
+        android:required="true" />
+
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 
     <application
         android:allowBackup="true"
@@ -50,18 +54,25 @@
         <activity
             android:name="com.example.wifilocalizer.LocalizePhone"
             android:label="@string/title_activity_localize_phone"
-            android:parentActivityName="com.example.wifilocalizer.MainActivity" 
+            android:parentActivityName="com.example.wifilocalizer.MainActivity"
             android:screenOrientation="landscape" >
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.example.wifilocalizer.MainActivity" />
         </activity>
-        
-        <activity 
-            android:name="com.matabii.dev.scaleimageview.ScaleImageViewActivity" >
+        <activity android:name="com.matabii.dev.scaleimageview.ScaleImageViewActivity" >
         </activity>
         
-        <!--  
+        <activity
+            android:name="com.example.wifilocalize.RotationVectorDemo"
+            android:label="@string/title_activity_rotation_vector_demo"
+            android:parentActivityName="com.example.wifilocalizer.MainActivity" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.example.wifilocalizer.MainActivity" />
+        </activity>
+
+        <!--
         <activity
             android:name="com.example.wifilocalizer.MarkOnMap"
             android:label="@string/title_activity_mark_on_map" 
@@ -71,8 +82,10 @@
                 android:value="com.example.wifilocalizer.MainActivity" />
         </activity>
         -->
-        
-        
+        <activity
+            android:name="com.example.wifilocalizer.RotationVectorDemo"
+            android:label="@string/title_activity_rotation_vector_demo" >
+        </activity>
     </application>
 
 </manifest>
