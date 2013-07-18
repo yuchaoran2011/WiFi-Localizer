@@ -2,12 +2,14 @@ package com.example.wifilocalizer;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -19,7 +21,10 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 
+import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
+import org.json.JSONTokener;
 
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
@@ -101,7 +106,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	private float[] rotationMatrix = new float[16];
 	private float[] newRotationVector = new float[3], oldRotationVector = new float[3], deltaRotationVector = new float[4];
 	
-	private float[] cameraPose = new float[3];
+	private float[] cameraPose = new float[3], orientation = new float[3];
 	
 	private boolean DEVELOPER_MODE = true, mAppStopped;
 	
@@ -171,12 +176,14 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 			JSONObject query, queryCore;
 			@SuppressWarnings("unused")
 			JSONObject params, pose, returnParams;
+			JSONObject motion;
 			
 			HashMap<String,Integer> macRSSI = new HashMap<String,Integer>();
 			HashMap<String, JSONObject> postedData = new HashMap<String, JSONObject>();
 			HashMap<String, Float> poseMap = new HashMap<String, Float>();
 			HashMap<String, Boolean> returnMap = new HashMap<String, Boolean>();
 			HashMap<String, Object> paramsMap = new HashMap<String, Object>();
+			HashMap<String, Float> motionMap = new HashMap<String, Float>();
   			
 			
 			List<ScanResult> scanResults = wifi.getScanResults();
@@ -230,9 +237,16 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				
 				params = new JSONObject(paramsMap);	
 				
+				
+				motionMap.put("hdg", orientation[0]);
+				motionMap.put("dis", 0.8f);
+				
+				motion = new JSONObject(motionMap);
+				
 							
 				new WifiQueryTask("http://192.168.1.141:8000/wifi/add_fingerprint", query).execute(c);
-
+				//new ImageQueryTask("https://", params).execute(c);
+				//new CentralQueryTask("http://10.10.65.182:8000/central/receive_hdg_and_dis", motion).execute(c);
 				
 				
 				/*
@@ -376,15 +390,17 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	}
 	
 	
-
 	
 	
-	private class WifiQueryTask extends AsyncTask<Context, Void, Void> 
+	
+	
+	
+	private class ImageQueryTask extends AsyncTask<Context, Void, Void> 
     {
         private String url_str;
         private JSONObject json;
 
-        public WifiQueryTask(String url, JSONObject json)
+        public ImageQueryTask(String url, JSONObject json)
         {
             this.url_str = url;
             this.json = json;
@@ -456,6 +472,174 @@ public class LocalizePhone extends Activity implements SensorEventListener {
             }
         }
     }
+	
+	
+	
+	
+	
+	private class CentralQueryTask extends AsyncTask<Context, Void, Void> 
+    {
+        private String url_str;
+        private JSONObject json;
+
+        public CentralQueryTask(String url, JSONObject json)
+        {
+            this.url_str = url;
+            this.json = json;
+        }
+        
+        
+        protected Void doInBackground(Context... c) {
+			byte[] data = json.toString().getBytes();
+		
+			try {
+				
+				URL url = new URL(url_str);
+		
+				
+				HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
+				   try {
+					 urlConnection.setReadTimeout( 10000 /*milliseconds*/ );
+					 urlConnection.setConnectTimeout( 15000 /* milliseconds */ );
+					   
+					 urlConnection.setDoInput(true);
+				     urlConnection.setDoOutput(true);
+				     urlConnection.setFixedLengthStreamingMode(data.length);
+				     
+				     urlConnection.setRequestProperty("content-type","application/json; charset=utf-8");
+				     urlConnection.setRequestProperty("Accept", "application/json");
+				     urlConnection.setRequestMethod("POST");
+
+				     urlConnection.connect();
+				     OutputStream out = new BufferedOutputStream(urlConnection.getOutputStream());
+			
+				     out.write(data);
+				     Log.d("DATA", json.toString());
+				     out.flush();
+				     
+				     
+				     InputStream in = new BufferedInputStream(urlConnection.getInputStream());
+				     readStream(in);
+				     
+				     in.close();
+				     out.close();
+				   }
+				    finally {
+				     urlConnection.disconnect();
+				    }
+				  
+				Log.d("URL_CONNECTION","SUCCESS!");
+			}
+			catch (MalformedURLException e){ }
+			catch (IOException e) {Log.d("URL_EXCEPTION","FAILURE!"+ e.getMessage()); }
+			
+			return null;
+        }
+        
+        
+        private String readStream(InputStream is) {
+            try {
+              ByteArrayOutputStream bo = new ByteArrayOutputStream();
+              int i = is.read();
+              while(i != -1) {
+                bo.write(i);
+                i = is.read();
+              }
+              return bo.toString();
+            } catch (IOException e) {
+            	
+              Log.d("readStreamException", "Read Stream failed!!");
+              return "";
+         
+            }
+        }
+    }
+	
+
+	
+
+	
+	
+	private class WifiQueryTask extends AsyncTask<Context, Void, Void> 
+    {
+        private String url_str;
+        private JSONObject json;
+
+        public WifiQueryTask(String url, JSONObject json)
+        {
+            this.url_str = url;
+            this.json = json;
+        }
+        
+        
+        protected Void doInBackground(Context... c) {
+			byte[] data = json.toString().getBytes();
+		
+			try {
+				
+				URL url = new URL(url_str);
+		
+				
+				HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
+				   try {
+					 urlConnection.setReadTimeout( 10000 /*milliseconds*/ );
+					 urlConnection.setConnectTimeout( 15000 /* milliseconds */ );
+					   
+					 urlConnection.setDoInput(true);
+				     urlConnection.setDoOutput(true);
+				     urlConnection.setFixedLengthStreamingMode(data.length);
+				     
+				     urlConnection.setRequestProperty("content-type","application/json; charset=utf-8");
+				     urlConnection.setRequestProperty("Accept", "application/json");
+				     urlConnection.setRequestMethod("POST");
+
+				     urlConnection.connect();
+				     OutputStream out = new BufferedOutputStream(urlConnection.getOutputStream());
+			
+				     out.write(data);
+				     Log.d("DATA", json.toString());
+				     out.flush();
+				     
+				     
+				     // Parse response sent from Django server
+				     InputStream in = new BufferedInputStream(urlConnection.getInputStream());
+				     BufferedReader br = new BufferedReader(new InputStreamReader(in));
+				     
+				     
+				     StringBuilder builder = new StringBuilder();
+				     String line = null;
+				     for (; (line = br.readLine()) != null;) {
+				         builder.append(line).append("\n");
+				     }     
+				     
+				     
+				     JSONTokener tokener = new JSONTokener(builder.toString());
+				     JSONObject finalResult = new JSONObject(tokener);
+				     
+				    
+				     Log.d("status", (Integer.valueOf(finalResult.getInt("status")).toString()));
+				     
+				     
+				     in.close();
+				     out.close();
+				   } catch (JSONException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				    finally {
+				     urlConnection.disconnect();
+				    }
+				  
+				Log.d("URL_CONNECTION","SUCCESS!");
+			}
+			catch (MalformedURLException e){ }
+			catch (IOException e) {Log.d("URL_EXCEPTION","FAILURE!"+ e.getMessage()); }
+			
+			return null;
+        }
+    }
+	
+
 	
 	
 	
@@ -698,7 +882,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 		
 	   else if (type == Sensor.TYPE_ROTATION_VECTOR) {
 		   long currTimestamp = System.currentTimeMillis(); 
-		   float[] orientation = new float[3];
+		   orientation = new float[3];
 		   
 		   newRotationVector = event.values.clone();
 		   if (oldRotationVector != null) {
