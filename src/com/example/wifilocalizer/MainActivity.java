@@ -46,4 +46,10 @@ public class MainActivity extends Activity {
     	Intent intent = new Intent(this, RotationVectorDemo.class);
     	startActivity(intent);
     }
+    
+    
+    public void staticLoc(View view) {
+    	Intent intent = new Intent(this, StaticLocalization.class);
+    	startActivity(intent);
+    }
 }

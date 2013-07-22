@@ -29,12 +29,20 @@
         android:contentDescription="@string/map_alt"
         android:adjustViewBounds="true"
         android:src="@drawable/coryf2" />
-        
+    
+    
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:onClick="staticLoc"
+        android:text="@string/button_static" />
+    
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:onClick="localize"
-        android:text="@string/button_localize" />
+        android:text="@string/button_dynamic" />
+    
     
     <Button
         android:layout_width="wrap_content"

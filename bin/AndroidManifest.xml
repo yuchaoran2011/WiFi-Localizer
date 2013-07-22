@@ -62,7 +62,6 @@
         </activity>
         <activity android:name="com.matabii.dev.scaleimageview.ScaleImageViewActivity" >
         </activity>
-        
         <activity
             android:name="com.example.wifilocalize.RotationVectorDemo"
             android:label="@string/title_activity_rotation_vector_demo"
@@ -72,19 +71,17 @@
                 android:value="com.example.wifilocalizer.MainActivity" />
         </activity>
 
-        <!--
-        <activity
-            android:name="com.example.wifilocalizer.MarkOnMap"
-            android:label="@string/title_activity_mark_on_map" 
-            android:parentActivityName="com.example.wifilocalizer.MainActivity" >
-            <meta-data
-                android:name="android.support.PARENT_ACTIVITY"
-                android:value="com.example.wifilocalizer.MainActivity" />
-        </activity>
-        -->
         <activity
             android:name="com.example.wifilocalizer.RotationVectorDemo"
             android:label="@string/title_activity_rotation_vector_demo" >
+        </activity>
+        <activity
+            android:name="com.example.wifilocalizer.StaticLocalization"
+            android:label="@string/title_activity_static_localization"
+            android:screenOrientation="landscape" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.example.wifilocalizer.MainActivity" />
         </activity>
     </application>
 
