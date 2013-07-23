@@ -78,6 +78,7 @@
         <activity
             android:name="com.example.wifilocalizer.StaticLocalization"
             android:label="@string/title_activity_static_localization"
+            android:parentActivityName="com.example.wifilocalizer.MainActivity"
             android:screenOrientation="landscape" >
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"

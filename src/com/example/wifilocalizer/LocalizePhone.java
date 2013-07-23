@@ -55,6 +55,11 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.widget.FrameLayout;
 import android.widget.TextView;
+import cz.muni.fi.sandbox.dsp.filters.ContinuousConvolution;
+import cz.muni.fi.sandbox.dsp.filters.FrequencyCounter;
+import cz.muni.fi.sandbox.dsp.filters.SinXPiWindow;
+import cz.muni.fi.sandbox.service.stepdetector.MovingAverageStepDetector;
+import cz.muni.fi.sandbox.service.stepdetector.MovingAverageStepDetector.MovingAverageStepDetectorState;
 
 
 
@@ -95,7 +100,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	private Camera camera;
 	private CameraPreview mPreview;
 	private SensorManager mSensorManager;
-	private Sensor linearAccelerometer, rotationSensor;
+	private Sensor linearAccelerometer, rotationSensor, accelerometer;
 	
 	
 	private float[] linearAcceleration = new float[4];
@@ -110,6 +115,39 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	private boolean DEVELOPER_MODE = true, mAppStopped;
 	
 	private BroadcastReceiver receiver;
+
+
+
+
+
+	private MovingAverageStepDetector mStepDetector;
+	private ContinuousConvolution mCC;
+	private FrequencyCounter freqCounter;
+
+	double movingAverage1 = MovingAverageStepDetector.MA1_WINDOW;
+	double movingAverage2 = MovingAverageStepDetector.MA2_WINDOW;
+			
+	double lowPowerCutoff = MovingAverageStepDetector.LOW_POWER_CUTOFF_VALUE;
+	double highPowerCutoff = MovingAverageStepDetector.HIGH_POWER_CUTOFF_VALUE;
+
+	private int mMASize = 20;
+	private float mSpeed = 1f;
+	float mConvolution, mLastConvolution;
+	
+	
+	
+
+
+	private Sensor getSensor(int sensorType, String sensorName) {
+
+		Sensor sensor = mSensorManager.getDefaultSensor(sensorType);
+		if (sensor != null) {
+			Log.d("TAG", "there is a " + sensorName);
+		} else {
+			Log.d("TAG", "there is no " + sensorName);
+		}
+		return sensor;
+	}
 
 	
 
@@ -148,6 +186,15 @@ public class LocalizePhone extends Activity implements SensorEventListener {
         
         linearAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
         rotationSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
+        accelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+
+
+
+        mStepDetector = new MovingAverageStepDetector(movingAverage1, movingAverage2, lowPowerCutoff, highPowerCutoff);
+
+		mCC = new ContinuousConvolution(new SinXPiWindow(mMASize));
+		freqCounter = new FrequencyCounter(20);
+
         
 		
 		IntentFilter i = new IntentFilter();
@@ -338,6 +385,9 @@ public class LocalizePhone extends Activity implements SensorEventListener {
         
         mSensorManager.registerListener(this, linearAccelerometer, SensorManager.SENSOR_DELAY_NORMAL);
         mSensorManager.registerListener(this, rotationSensor, SensorManager.SENSOR_DELAY_NORMAL);
+        mSensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_FASTEST);
+        
+        
         
         
         
@@ -654,6 +704,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 		
 		mSensorManager.unregisterListener(this, linearAccelerometer);
 		mSensorManager.unregisterListener(this, rotationSensor);
+		mSensorManager.unregisterListener(this, accelerometer);
 		unregisterReceiver(receiver);
 	}
 	
@@ -839,6 +890,35 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	
 	
 	
+	
+	
+	public void processAccelerometerEvent(SensorEvent event) {		
+			mConvolution = (float) (mCC.process(event.values[2]));
+			mStepDetector.onSensorChanged(event);
+			displayStepDetectorState(mStepDetector.getState());
+	}
+	
+	
+	private void displayStepDetectorState(MovingAverageStepDetectorState state) {
+		boolean stepDetected = state.states[0];
+		boolean signalPowerOutOfRange = state.states[1];
+		
+		if (stepDetected) {
+			if (signalPowerOutOfRange) {
+				Log.d("Step Invalid", "Power out of range!");
+			} else {
+				Log.d("Step", "Valid step!");
+			}
+		}
+	}
+	
+	
+	
+	
+	
+	
+	
+	
 	/*****    Sensor Code    ****/
 	
 	public final void onAccuracyChanged(Sensor sensor, int accuracy) {
@@ -849,6 +929,16 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	
 	public void onSensorChanged(SensorEvent event){
 		int type = event.sensor.getType();
+
+		synchronized (this) {
+				if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+					processAccelerometerEvent(event);
+					freqCounter.push(event.timestamp);
+					float rate = freqCounter.getRateF();
+					if (rate != 0.0f)
+						mSpeed = 100f / rate;
+				}
+			}
 		
 		/*
 		if (type == Sensor.TYPE_ACCELEROMETER) {
