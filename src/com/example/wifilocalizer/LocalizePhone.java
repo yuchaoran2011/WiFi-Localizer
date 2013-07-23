@@ -243,9 +243,9 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				motion = new JSONObject(motionMap);
 				
 							
-				new WifiQueryTask("http://10.10.65.21:8000/wifi/submit_fingerprint", query).execute(c);
+				//new WifiQueryTask("http://10.10.65.21:8000/wifi/submit_fingerprint", query).execute(c);
 				//new ImageQueryTask("https://", params).execute(c);
-				//new CentralQueryTask("http://10.10.65.182:8000/central/receive_hdg_and_dis", motion).execute(c);
+				new CentralQueryTask("http://192.168.1.141:8000/central/receive_hdg_and_dis", motion).execute(c);
 				
 				
 				/*

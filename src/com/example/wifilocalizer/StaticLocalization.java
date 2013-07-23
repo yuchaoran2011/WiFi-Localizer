@@ -16,7 +16,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -32,7 +31,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.pm.PackageManager;
 import android.hardware.Camera;
 import android.hardware.Camera.PictureCallback;
 import android.hardware.Sensor;
@@ -184,7 +182,8 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 				for (ScanResult scan : scanResults) {
 					int linearLevel = WifiManager.calculateSignalLevel(scan.level, 99);
 					
-					macRSSI.put(scan.BSSID.toString(), scan.level*100-linearLevel);
+					//macRSSI.put(scan.BSSID.toString(), scan.level*100-linearLevel);
+					macRSSI.put(scan.BSSID.toString(), scan.level);
 					//textView.append("\n\n" + scan.SSID.toString() + " " + scan.BSSID.toString() + " " + macRSSI.get(scan.BSSID.toString()));
 				}
 				
@@ -229,7 +228,7 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 				motion = new JSONObject(motionMap);
 				
 							
-				new WifiQueryTask("http://10.10.65.21:8000/wifi/submit_fingerprint", query).execute(c);
+				new WifiQueryTask("http://10.10.67.153:8000/wifi/submit_fingerprint", query).execute(c);
 				//new ImageQueryTask("https://", params).execute(c);
 				//new CentralQueryTask("http://10.10.65.182:8000/central/receive_hdg_and_dis", motion).execute(c);
 				
@@ -341,7 +340,7 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 	                timestamp = System.currentTimeMillis();
 	                camera.takePicture(null, null, mPicture);
 	                camera.startPreview();
-	                handler.postDelayed(this, 2000);
+	                handler.postDelayed(this, 5000);
 	                }
 	                
 	            }
@@ -651,21 +650,7 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 	
 	
 	
-	/*******    Camera Code     ********/
-	
-	/* Check if this device has a camera */
-	@SuppressWarnings("unused")
-	private boolean checkCameraHardware(Context context) {
-	    if (context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA)){
-	        // this device has a camera
-	        return true;
-	    } else {
-	        // no camera on this device
-	        return false;
-	    }
-	}
-	
-	
+	/*******    Camera Code     ********/	
 	
 	/** A safe way to get an instance of the Camera object. */
 	public static Camera getCameraInstance(){
@@ -783,6 +768,7 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 	
 	
 	/** Create a File for saving an image or video */
+	@SuppressLint("SimpleDateFormat")
 	private static File getOutputMediaFile(int type){
 	    // To be safe, you should check that the SDCard is mounted
 	    // using Environment.getExternalStorageState() before doing this.
