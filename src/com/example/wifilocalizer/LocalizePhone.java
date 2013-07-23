@@ -134,20 +134,10 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	private float mSpeed = 1f;
 	float mConvolution, mLastConvolution;
 	
+	double stepLength = -10.0;
 	
 	
 
-
-	private Sensor getSensor(int sensorType, String sensorName) {
-
-		Sensor sensor = mSensorManager.getDefaultSensor(sensorType);
-		if (sensor != null) {
-			Log.d("TAG", "there is a " + sensorName);
-		} else {
-			Log.d("TAG", "there is no " + sensorName);
-		}
-		return sensor;
-	}
 
 	
 
@@ -222,14 +212,14 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 			JSONObject query, queryCore;
 			@SuppressWarnings("unused")
 			JSONObject params, pose, returnParams;
-			JSONObject motion;
+			//JSONObject motion;
 			
 			HashMap<String,Integer> macRSSI = new HashMap<String,Integer>();
 			HashMap<String, JSONObject> postedData = new HashMap<String, JSONObject>();
 			HashMap<String, Float> poseMap = new HashMap<String, Float>();
 			HashMap<String, Boolean> returnMap = new HashMap<String, Boolean>();
 			HashMap<String, Object> paramsMap = new HashMap<String, Object>();
-			HashMap<String, Float> motionMap = new HashMap<String, Float>();
+			//HashMap<String, Double> motionMap = new HashMap<String, Double>();
   			
 			
 			List<ScanResult> scanResults = wifi.getScanResults();
@@ -284,15 +274,15 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				params = new JSONObject(paramsMap);	
 				
 				
-				motionMap.put("hdg", orientation[0]);
-				motionMap.put("dis", 0.8f);
+				//motionMap.put("hdg", (double)orientation[0]);
+				//motionMap.put("dis", stepLength);
 				
-				motion = new JSONObject(motionMap);
+				//motion = new JSONObject(motionMap);
 				
 							
 				//new WifiQueryTask("http://10.10.65.21:8000/wifi/submit_fingerprint", query).execute(c);
 				//new ImageQueryTask("https://", params).execute(c);
-				new CentralQueryTask("http://192.168.1.141:8000/central/receive_hdg_and_dis", motion).execute(c);
+				//new CentralQueryTask("http://10.10.67.153:8000/central/receive_hdg_and_dis", motion).execute(c);
 				
 				
 				/*
@@ -895,21 +885,35 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	public void processAccelerometerEvent(SensorEvent event) {		
 			mConvolution = (float) (mCC.process(event.values[2]));
 			mStepDetector.onSensorChanged(event);
-			displayStepDetectorState(mStepDetector.getState());
+			stepLength = displayStepDetectorState(mStepDetector);
 	}
 	
 	
-	private void displayStepDetectorState(MovingAverageStepDetectorState state) {
-		boolean stepDetected = state.states[0];
-		boolean signalPowerOutOfRange = state.states[1];
+	private double displayStepDetectorState(MovingAverageStepDetector detector) {
+		MovingAverageStepDetectorState s = detector.getState();
+		boolean stepDetected = s.states[0];
+		boolean signalPowerOutOfRange = s.states[1];
 		
 		if (stepDetected) {
 			if (signalPowerOutOfRange) {
 				Log.d("Step Invalid", "Power out of range!");
+				return -10.0;
 			} else {
 				Log.d("Step", "Valid step!");
+				
+				JSONObject motion;
+				HashMap<String, Double> motionMap = new HashMap<String, Double>();
+				
+				motionMap.put("hdg", (double)orientation[0]);
+				motionMap.put("dis", detector.stepLength);
+				
+				motion = new JSONObject(motionMap);
+				
+				new CentralQueryTask("http://10.10.67.153:8000/central/receive_hdg_and_dis", motion).execute(this.getApplicationContext());
+				return detector.stepLength;
 			}
 		}
+		return -10.0;
 	}
 	
 	
