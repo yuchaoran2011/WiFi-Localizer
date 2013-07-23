@@ -172,7 +172,6 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 					
 					//macRSSI.put(scan.BSSID.toString(), scan.level*100-linearLevel);
 					macRSSI.put(scan.BSSID.toString(), scan.level);
-					//textView.append("\n\n" + scan.SSID.toString() + " " + scan.BSSID.toString() + " " + macRSSI.get(scan.BSSID.toString()));
 				}
 				
 				
@@ -215,8 +214,7 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 			}
 			}
 		}
-	,i);    	
-			
+	,i);    				
 			
 		// Show the Up button in the action bar.
 		setupActionBar();

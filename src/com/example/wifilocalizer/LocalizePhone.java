@@ -82,14 +82,8 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	
 	public static final int MEDIA_TYPE_IMAGE = 1;
 	public static final int MEDIA_TYPE_VIDEO = 2;
+
 	
-	
-	/* Constants used to process gyroscope data
-	// Create a constant to convert nanoseconds to seconds.
-	private static final float NS2S = 1.0f / 1000000000.0f;
-	
-	private double EPSILON = 0.1;
-	*/
 	private long timestamp;
 	
 	
@@ -119,7 +113,6 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 
 
 
-
 	private MovingAverageStepDetector mStepDetector;
 	private ContinuousConvolution mCC;
 	private FrequencyCounter freqCounter;
@@ -136,6 +129,8 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	float mConvolution, mLastConvolution;
 	
 	double stepLength = -10.0;
+	
+	JSONObject WiFiResponse;
 	
 	
 
@@ -177,6 +172,8 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 
 		mCC = new ContinuousConvolution(new SinXPiWindow(mMASize));
 		freqCounter = new FrequencyCounter(20);
+		
+		
 
         
 		
@@ -259,6 +256,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				
 							
 				new WifiQueryTask("http://django.kung-fu.org:8001/wifi/submit_fingerprint", query).execute(c);
+				
 				//new ImageQueryTask("https://", params).execute(c);
 				//new CentralQueryTask("http://10.10.67.153:8000/central/receive_hdg_and_dis", motion).execute(c);
 			}
@@ -610,6 +608,22 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				     JSONObject finalResult = new JSONObject(tokener);
 				     
 				   
+				     HashMap<String, String> WiFiResponseMap = new HashMap<String, String>();
+				     WiFiResponseMap.put("status", (Integer.valueOf(finalResult.getInt("status")).toString()));
+				     WiFiResponseMap.put("location", finalResult.getString("location"));
+				     WiFiResponseMap.put("confidence", (Double.valueOf(finalResult.getDouble("confidence")).toString()));
+				     WiFiResponse = new JSONObject(WiFiResponseMap);
+				     
+				     HashMap<String, Object> motionMap = new HashMap<String, Object>();
+				     motionMap.put("hdg", -500);
+				     motionMap.put("dis", 1000);
+				     motionMap.put("wifiResponse", WiFiResponse);
+				     
+				     JSONObject wifiMotion = new JSONObject(motionMap);
+				     
+				     new CentralQueryTask("http://10.10.67.153:8000/central/receive_hdg_and_dis", wifiMotion).execute(c);
+				     
+				     
 				     Log.d("status", (Integer.valueOf(finalResult.getInt("status")).toString()));
 				     Log.d("location", finalResult.getString("location"));
 				     Log.d("confidence", (Double.valueOf(finalResult.getDouble("confidence")).toString()));
@@ -618,6 +632,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				     
 				     in.close();
 				     out.close();
+				     
 				   } catch (JSONException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -843,10 +858,11 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				Log.d("Step", "Valid step!");
 				
 				JSONObject motion;
-				HashMap<String, Double> motionMap = new HashMap<String, Double>();
+				HashMap<String, Object> motionMap = new HashMap<String, Object>();
 				
 				motionMap.put("hdg", (double)orientation[0]);
 				motionMap.put("dis", detector.stepLength);
+				motionMap.put("wifiResponse", WiFiResponse);
 				
 				motion = new JSONObject(motionMap);
 				
