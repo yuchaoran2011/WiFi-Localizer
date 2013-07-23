@@ -138,8 +138,7 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 		i.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
 		
 		registerReceiver(receiver = new BroadcastReceiver(){
-			
-		//long prev = 0;
+
 		
 		
 		
@@ -147,26 +146,15 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 		public void onReceive(Context c, Intent i){
 		// Code to execute when SCAN_RESULTS_AVAILABLE_ACTION event occurs
 			
-			//textView = new TextView(c);
-			//textView.setMovementMethod(new ScrollingMovementMethod());
-			//textView.setTextSize(16);
-			
-		
-			
-			
-			//Date d = new Date();
-			//long curr = d.getTime();
 			JSONObject query, queryCore;
 			@SuppressWarnings("unused")
 			JSONObject params, pose, returnParams;
-			JSONObject motion;
 			
 			HashMap<String,Integer> macRSSI = new HashMap<String,Integer>();
 			HashMap<String, JSONObject> postedData = new HashMap<String, JSONObject>();
 			HashMap<String, Float> poseMap = new HashMap<String, Float>();
 			HashMap<String, Boolean> returnMap = new HashMap<String, Boolean>();
 			HashMap<String, Object> paramsMap = new HashMap<String, Object>();
-			HashMap<String, Float> motionMap = new HashMap<String, Float>();
   			
 			
 			List<ScanResult> scanResults = wifi.getScanResults();
@@ -180,7 +168,7 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 				Collections.sort(scanResults, new ScanComparable());
 			
 				for (ScanResult scan : scanResults) {
-					int linearLevel = WifiManager.calculateSignalLevel(scan.level, 99);
+					//int linearLevel = WifiManager.calculateSignalLevel(scan.level, 99);
 					
 					//macRSSI.put(scan.BSSID.toString(), scan.level*100-linearLevel);
 					macRSSI.put(scan.BSSID.toString(), scan.level);
@@ -220,43 +208,11 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 				paramsMap.put("return", returnParams);
 				
 				params = new JSONObject(paramsMap);	
-				
-				
-				motionMap.put("hdg", orientation[0]);
-				motionMap.put("dis", 0.8f);
-				
-				motion = new JSONObject(motionMap);
-				
 							
-				new WifiQueryTask("http://10.10.67.153:8000/wifi/submit_fingerprint", query).execute(c);
+				new WifiQueryTask("http://django.kung-fu.org:8001/wifi/submit_fingerprint", query).execute(c);
 				//new ImageQueryTask("https://", params).execute(c);
 				//new CentralQueryTask("http://10.10.65.182:8000/central/receive_hdg_and_dis", motion).execute(c);
-				
-				
-				/*
-				textView.setText("\nQuery sent to the server!\n" + textView.getText());
-				
-				
-				textView.setText("\nCurrent System Timestamp: " + d.getTime() + " " 
-				+ "\nNumber of Access Points detected: " + macRSSI.size() + "\n\nSignature (Ordered by RSSI values from strongest to weakest): "
-						+ textView.getText());*/
-			
 			}
-			
-			/*
-			if (prev != 0)
-				textView.setText("Hey! Scan results are now available!\n" + "Time spent to finish the scan: " + (curr-prev) + "\n" + textView.getText());
-			else
-				textView.setText("Hey! Scan results are now available!\n\n" + textView.getText());
-				
-			prev = curr;
-			*/
-			
-			/*
-			textView.setMovementMethod(new ScrollingMovementMethod());
-			textView.setTextSize(16);	
-			setContentView(textView);
-			*/
 			}
 		}
 	,i);    	
@@ -379,6 +335,7 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 	
 	
 	
+	@SuppressWarnings("unused")
 	private class ImageQueryTask extends AsyncTask<Context, Void, Void> 
     {
         private String url_str;
@@ -461,6 +418,7 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 	
 	
 	
+	@SuppressWarnings("unused")
 	private class CentralQueryTask extends AsyncTask<Context, Void, Void> 
     {
         private String url_str;
@@ -689,20 +647,7 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 	            mCamera.startPreview();
 	        } catch (IOException e) {
 	            Log.d("TAG1: ", "Error setting camera preview: " + e.getMessage());
-	        }/*
-	        mCamera.setDisplayOrientation(90);
-	        try {
-	        	mCamera.setPreviewDisplay(holder);
-	        	mCamera.setPreviewCallback(new PreviewCallback() {
-
-	        		@Override
-	        		public void onPreviewFrame(byte[] data, Camera camera) {
-	        		}
-	        	});
-
-	        } catch (Exception e) {
-	        	e.printStackTrace();
-	        }*/
+	        }
 	    }
 
 	    public void surfaceDestroyed(SurfaceHolder holder) {

@@ -131,6 +131,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	double highPowerCutoff = MovingAverageStepDetector.HIGH_POWER_CUTOFF_VALUE;
 
 	private int mMASize = 20;
+	@SuppressWarnings("unused")
 	private float mSpeed = 1f;
 	float mConvolution, mLastConvolution;
 	
@@ -161,16 +162,8 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 		
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_localize_phone);
-	
+
 		
-		
-		/*
-		camera = getCameraInstance();
-		mPreview = new CameraPreview(this, camera);
-        FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
-        preview.addView(mPreview);*/
-        
-        
         
         mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         
@@ -191,35 +184,21 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 		i.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
 		
 		registerReceiver(receiver = new BroadcastReceiver(){
-			
-		//long prev = 0;
 		
 		
 		
 		@Override
 		public void onReceive(Context c, Intent i){
-		// Code to execute when SCAN_RESULTS_AVAILABLE_ACTION event occurs
-			
-			//textView = new TextView(c);
-			//textView.setMovementMethod(new ScrollingMovementMethod());
-			//textView.setTextSize(16);
-			
-		
-			
-			
-			//Date d = new Date();
-			//long curr = d.getTime();
+
 			JSONObject query, queryCore;
 			@SuppressWarnings("unused")
 			JSONObject params, pose, returnParams;
-			//JSONObject motion;
 			
 			HashMap<String,Integer> macRSSI = new HashMap<String,Integer>();
 			HashMap<String, JSONObject> postedData = new HashMap<String, JSONObject>();
 			HashMap<String, Float> poseMap = new HashMap<String, Float>();
 			HashMap<String, Boolean> returnMap = new HashMap<String, Boolean>();
 			HashMap<String, Object> paramsMap = new HashMap<String, Object>();
-			//HashMap<String, Double> motionMap = new HashMap<String, Double>();
   			
 			
 			List<ScanResult> scanResults = wifi.getScanResults();
@@ -236,7 +215,6 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 					int linearLevel = WifiManager.calculateSignalLevel(scan.level, 99);
 					
 					macRSSI.put(scan.BSSID.toString(), scan.level*100-linearLevel);
-					//textView.append("\n\n" + scan.SSID.toString() + " " + scan.BSSID.toString() + " " + macRSSI.get(scan.BSSID.toString()));
 				}
 				
 				
@@ -280,36 +258,11 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				//motion = new JSONObject(motionMap);
 				
 							
-				//new WifiQueryTask("http://10.10.65.21:8000/wifi/submit_fingerprint", query).execute(c);
+				new WifiQueryTask("http://django.kung-fu.org:8001/wifi/submit_fingerprint", query).execute(c);
 				//new ImageQueryTask("https://", params).execute(c);
 				//new CentralQueryTask("http://10.10.67.153:8000/central/receive_hdg_and_dis", motion).execute(c);
-				
-				
-				/*
-				textView.setText("\nQuery sent to the server!\n" + textView.getText());
-				
-				
-				textView.setText("\nCurrent System Timestamp: " + d.getTime() + " " 
-				+ "\nNumber of Access Points detected: " + macRSSI.size() + "\n\nSignature (Ordered by RSSI values from strongest to weakest): "
-						+ textView.getText());*/
-			
 			}
-			
-			/*
-			if (prev != 0)
-				textView.setText("Hey! Scan results are now available!\n" + "Time spent to finish the scan: " + (curr-prev) + "\n" + textView.getText());
-			else
-				textView.setText("Hey! Scan results are now available!\n\n" + textView.getText());
-				
-			prev = curr;
-			*/
-			
-			/*
-			textView.setMovementMethod(new ScrollingMovementMethod());
-			textView.setTextSize(16);	
-			setContentView(textView);
-			*/
-			}
+		}
 		}
 	,i);    	
 			
@@ -434,6 +387,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	
 	
 	
+	@SuppressWarnings("unused")
 	private class ImageQueryTask extends AsyncTask<Context, Void, Void> 
     {
         private String url_str;
@@ -759,20 +713,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	            mCamera.startPreview();
 	        } catch (IOException e) {
 	            Log.d("TAG1: ", "Error setting camera preview: " + e.getMessage());
-	        }/*
-	        mCamera.setDisplayOrientation(90);
-	        try {
-	        	mCamera.setPreviewDisplay(holder);
-	        	mCamera.setPreviewCallback(new PreviewCallback() {
-
-	        		@Override
-	        		public void onPreviewFrame(byte[] data, Camera camera) {
-	        		}
-	        	});
-
-	        } catch (Exception e) {
-	        	e.printStackTrace();
-	        }*/
+	        }
 	    }
 
 	    public void surfaceDestroyed(SurfaceHolder holder) {
@@ -944,28 +885,6 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				}
 			}
 		
-		/*
-		if (type == Sensor.TYPE_ACCELEROMETER) {
-		
-		  // In this example, alpha is calculated as t / (t + dT),
-		  // where t is the low-pass filter's time-constant and
-		  // dT is the event delivery rate.
-
-		  final float alpha = (float)0.8;
-
-		  // Isolate the force of gravity with the low-pass filter.
-		  gravity[0] = alpha * gravity[0] + (1 - alpha) * event.values[0];
-		  gravity[1] = alpha * gravity[1] + (1 - alpha) * event.values[1];
-		  gravity[2] = alpha * gravity[2] + (1 - alpha) * event.values[2];
-
-		  // Remove the gravity contribution with the high-pass filter.
-		  linearAcceleration[0] = event.values[0] - gravity[0];
-		  linearAcceleration[1] = event.values[1] - gravity[1];
-		  linearAcceleration[2] = event.values[2] - gravity[2];
-		  //Log.d("Acceleration", linearAcceleration[0] + " " + linearAcceleration[1] + " " + linearAcceleration[2]);
-		}*/
-		
-		
 		
 		
 		if (type == Sensor.TYPE_LINEAR_ACCELERATION) {
@@ -1019,83 +938,5 @@ public class LocalizePhone extends Activity implements SensorEventListener {
            oldRotationVector[1] = newRotationVector[1];
            oldRotationVector[2] = newRotationVector[2];
 	   }
-		
-		
-		
-		
-		
-		/*
-	   else if (type == Sensor.TYPE_MAGNETIC_FIELD) {
-		   magneticField = new float[3];
-		   magneticField = event.values.clone();
-	   }*/	
-		
-		/*
-	   else if (type == Sensor.TYPE_GYROSCOPE) {
-		// This timestep's delta rotation to be multiplied by the current rotation
-		   // after computing it from the gyro sample data.
-		   if (timestamp != 0) {
-		     final float dT = (event.timestamp - timestamp) * NS2S;
-		     // Axis of the rotation sample, not normalized yet.
-		     float axisX = event.values[0];
-		     float axisY = event.values[1];
-		     float axisZ = event.values[2];
-
-		     // Calculate the angular speed of the sample
-		     float omegaMagnitude = (float)Math.sqrt(axisX*axisX + axisY*axisY + axisZ*axisZ);
-
-		     // Normalize the rotation vector if it's big enough to get the axis
-		     // (that is, EPSILON should represent your maximum allowable margin of error)
-		     if (omegaMagnitude > EPSILON) {
-		       axisX /= omegaMagnitude;
-		       axisY /= omegaMagnitude;
-		       axisZ /= omegaMagnitude;
-		     }
-
-		     // Integrate around this axis with the angular speed by the timestep
-		     // in order to get a delta rotation from this sample over the timestep
-		     // We will convert this axis-angle representation of the delta rotation
-		     // into a quaternion before turning it into the rotation matrix.
-		     float thetaOverTwo = omegaMagnitude * dT / 2.0f;
-		     float sinThetaOverTwo = (float)Math.sin(thetaOverTwo);
-		     float cosThetaOverTwo = (float)Math.cos(thetaOverTwo);
-		     deltaRotationVector[0] = sinThetaOverTwo * axisX;
-		     deltaRotationVector[1] = sinThetaOverTwo * axisY;
-		     deltaRotationVector[2] = sinThetaOverTwo * axisZ;
-		     deltaRotationVector[3] = cosThetaOverTwo;
-		     
-		     //Log.d("LOCAL_ROTATION", deltaRotationVector[0] + " " + deltaRotationVector[1] + " " + deltaRotationVector[2]);
-		   }
-		   timestamp = event.timestamp;
-		   //float[] deltaRotationMatrix = new float[9];
-		   //SensorManager.getRotationMatrixFromVector(deltaRotationMatrix, deltaRotationVector);
-			     // User code should concatenate the delta rotation we computed with the current rotation
-			     // in order to get the updated rotation.
-			     // rotationCurrent = rotationCurrent * deltaRotationMatrix;
-	   }*/
-	   
-		
-	
-		/*
-		if (magneticField != null && !(linearAcceleration[0] == 0.0 && linearAcceleration[1] == 0.0 && linearAcceleration[2] == 0.0)) {
-            float[] R = new float[16];
-            float[] I = new float[16];
-            SensorManager.getRotationMatrix(R, I, linearAcceleration, magneticField);
-            
-            for (int i=0;i<4;i++) {
-            	globalDeltaRotationVector[i] = (float)0.0;
-            	globalAcceleration[i] = (float)0.0;
-            }
-            
-            for (int i=0;i<4;i++) {
-            	for (int j=0;j<4;j++) {
-            	globalDeltaRotationVector[i] += R[(i+1)*(j+1)-1] * deltaRotationVector[i];
-            	if (i<3)
-            		globalAcceleration[i] += R[(i+1)*(j+1)-1] * linearAcceleration[i];
-            	}
-            }
-            //Log.d("GLOBAL_ROTATION", globalDeltaRotationVector[0] + " " + globalDeltaRotationVector[1] + " " + globalDeltaRotationVector[2]);
-            Log.d("GLOBAL_ACCELERATION", globalAcceleration[0] + " " + globalAcceleration[1] + " " + globalAcceleration[2]);
-        }*/
 	 }
 }
