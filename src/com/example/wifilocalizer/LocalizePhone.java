@@ -5,8 +5,8 @@ import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -33,6 +33,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.hardware.Camera;
 import android.hardware.Camera.PictureCallback;
 import android.hardware.Sensor;
@@ -80,8 +82,11 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	@SuppressLint("NewApi")
 	
 	
-	public static final int MEDIA_TYPE_IMAGE = 1;
-	public static final int MEDIA_TYPE_VIDEO = 2;
+	private static final String WIFI_URL = "http://django.kung-fu.org:8001/wifi/submit_fingerprint";
+	private static final String IMAGE_URL = "http://";
+	private static final String CENTRAL_DYNAMIC_URL = "http://10.10.67.153:8000/central/receive_hdg_and_dis";
+	private static final String CENTRAL_STATIC_URL = "http://10.10.66.12:8000/central/static_fusion";
+	
 
 	
 	private long timestamp;
@@ -130,8 +135,8 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	
 	double stepLength = -10.0;
 	
-	JSONObject WiFiResponse;
-	
+	JSONObject wifiResponse, imageResponse, overallResponse;
+	static byte[] image;
 	
 
 
@@ -188,14 +193,16 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 		public void onReceive(Context c, Intent i){
 
 			JSONObject query, queryCore;
-			@SuppressWarnings("unused")
-			JSONObject params, pose, returnParams;
+			JSONObject pose, returnParams;
+			JSONObject imageQuery;
 			
 			HashMap<String,Integer> macRSSI = new HashMap<String,Integer>();
 			HashMap<String, JSONObject> postedData = new HashMap<String, JSONObject>();
 			HashMap<String, Float> poseMap = new HashMap<String, Float>();
 			HashMap<String, Boolean> returnMap = new HashMap<String, Boolean>();
 			HashMap<String, Object> paramsMap = new HashMap<String, Object>();
+			
+			HashMap<String, Object> imageQueryMap = new HashMap<String, Object>();
   			
 			
 			List<ScanResult> scanResults = wifi.getScanResults();
@@ -209,9 +216,6 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				Collections.sort(scanResults, new ScanComparable());
 			
 				for (ScanResult scan : scanResults) {
-					//int linearLevel = WifiManager.calculateSignalLevel(scan.level, 99);
-					
-					//macRSSI.put(scan.BSSID.toString(), scan.level*100-linearLevel);
 					macRSSI.put(scan.BSSID.toString(), scan.level);
 				}
 				
@@ -233,7 +237,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				pose = new JSONObject(poseMap);
 
 				returnMap.put("statistics", true);
-				returnMap.put("image_data", true);
+				returnMap.put("image_data", false);
 				returnMap.put("estimated_client_pose", true);
 				returnMap.put("pose_visualization_only", false);
 				returnParams = new JSONObject(returnMap);
@@ -241,13 +245,17 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				paramsMap.put("method", "client_query");
 				paramsMap.put("user", "test");
 				paramsMap.put("database", "CoryHall");
-				paramsMap.put("deadline_seconds", 2.0);
+				paramsMap.put("deadline_seconds", 5.0);
 				paramsMap.put("disable_gpu", false);
 				paramsMap.put("perfmode", "fast");
 				paramsMap.put("pose", pose);
 				paramsMap.put("return", returnParams);
 				
-				params = new JSONObject(paramsMap);	
+				imageQueryMap.put("data", image);
+				imageQueryMap.put("params", paramsMap);
+				
+				
+				imageQuery = new JSONObject(imageQueryMap);
 				
 				
 				//motionMap.put("hdg", (double)orientation[0]);
@@ -256,10 +264,10 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				//motion = new JSONObject(motionMap);
 				
 							
-				new WifiQueryTask("http://django.kung-fu.org:8001/wifi/submit_fingerprint", query).execute(c);
+				new WifiQueryTask(WIFI_URL, query).execute(c);
+				new ImageQueryTask(IMAGE_URL, imageQuery).execute(c);
 				
-				//new ImageQueryTask("https://", params).execute(c);
-				//new CentralQueryTask("http://10.10.67.153:8000/central/receive_hdg_and_dis", motion).execute(c);
+				//new CentralQueryTask(CENTRAL_DYNAMIC_URL, motion).execute(c);
 			}
 		}
 		}
@@ -385,8 +393,6 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	
 	
 	
-	
-	@SuppressWarnings("unused")
 	private class ImageQueryTask extends AsyncTask<Context, Void, Void> 
     {
         private String url_str;
@@ -431,16 +437,63 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				     out.flush();
 				     
 				     
+				     // Parse response sent from Wherelab image localization server
 				     InputStream in = new BufferedInputStream(urlConnection.getInputStream());
-				     readStream(in);
+				     BufferedReader br = new BufferedReader(new InputStreamReader(in));
+				     
+				     
+				     StringBuilder builder = new StringBuilder();
+				     String line = null;
+				     for (; (line = br.readLine()) != null;) {
+				         builder.append(line).append("\n");
+				     }     
+				     
+				     
+				     JSONTokener tokener = new JSONTokener(builder.toString());
+				     JSONObject finalResult = new JSONObject(tokener); 
+				   
+				     HashMap<String, String> imageResponseMap = new HashMap<String, String>();
+				     imageResponseMap.put("location", (Integer.valueOf(finalResult.getInt("local_x")).toString()) + " " +(Integer.valueOf(finalResult.getInt("local_y")).toString()));
+				     imageResponseMap.put("confidence", (Double.valueOf(finalResult.getDouble("overall_confidence")).toString()));
+				     imageResponse = new JSONObject(imageResponseMap);
+				     
+				     
+				     HashMap<String, JSONObject> overallMap = new HashMap<String, JSONObject>();
+				     overallMap.put("imageResponse", imageResponse);
+				     overallMap.put("wifiResponse", wifiResponse);
+				     
+				     overallResponse = new JSONObject(overallMap);
+				     
+				     
+				     /*
+				     HashMap<String, Object> motionMap = new HashMap<String, Object>();
+				     motionMap.put("hdg", -500);
+				     motionMap.put("dis", 1000);
+				     motionMap.put("imageResponse", imageResponse);
+
+				     
+				     JSONObject imageMotion = new JSONObject(motionMap);
+				     */
+				     
+				     new CentralQueryTask(CENTRAL_STATIC_URL, overallResponse).execute(c);
+				     
+				     
+				     Log.d("Image status", (Integer.valueOf(finalResult.getInt("status")).toString()));
+				     Log.d("Image location", finalResult.getString("local_x") + " " + finalResult.getString("local_y"));
+				     Log.d("Image confidence", (Double.valueOf(finalResult.getDouble("overall_confidence")).toString()));
+				     
+				     
 				     
 				     in.close();
 				     out.close();
-				   }
-				    finally {
-				     urlConnection.disconnect();
-				    }
-				  
+				     
+				   } catch (JSONException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					    finally {
+					     urlConnection.disconnect();
+					    }
 				Log.d("URL_CONNECTION","SUCCESS!");
 			}
 			catch (MalformedURLException e){ }
@@ -448,25 +501,8 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 			
 			return null;
         }
-        
-        
-        private String readStream(InputStream is) {
-            try {
-              ByteArrayOutputStream bo = new ByteArrayOutputStream();
-              int i = is.read();
-              while(i != -1) {
-                bo.write(i);
-                i = is.read();
-              }
-              return bo.toString();
-            } catch (IOException e) {
-            	
-              Log.d("readStreamException", "Read Stream failed!!");
-              return "";
-         
-            }
-        }
     }
+	
 	
 	
 	
@@ -618,25 +654,25 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				     JSONObject finalResult = new JSONObject(tokener);
 				     
 				   
-				     HashMap<String, String> WiFiResponseMap = new HashMap<String, String>();
-				     WiFiResponseMap.put("status", (Integer.valueOf(finalResult.getInt("status")).toString()));
-				     WiFiResponseMap.put("location", finalResult.getString("location"));
-				     WiFiResponseMap.put("confidence", (Double.valueOf(finalResult.getDouble("confidence")).toString()));
-				     WiFiResponse = new JSONObject(WiFiResponseMap);
+				     HashMap<String, String> wifiResponseMap = new HashMap<String, String>();
+				     wifiResponseMap.put("status", (Integer.valueOf(finalResult.getInt("status")).toString()));
+				     wifiResponseMap.put("location", finalResult.getString("location"));
+				     wifiResponseMap.put("confidence", (Double.valueOf(finalResult.getDouble("confidence")).toString()));
+				     wifiResponse = new JSONObject(wifiResponseMap);
 				     
-				     HashMap<String, Object> motionMap = new HashMap<String, Object>();
-				     motionMap.put("hdg", -500);
-				     motionMap.put("dis", 1000);
-				     motionMap.put("wifiResponse", WiFiResponse);
+				     //HashMap<String, Object> motionMap = new HashMap<String, Object>();
+				     //motionMap.put("hdg", -500);
+				     //motionMap.put("dis", 1000);
+				     //motionMap.put("wifiResponse", wifiResponse);
 				     
-				     JSONObject wifiMotion = new JSONObject(motionMap);
+				     //JSONObject wifiMotion = new JSONObject(motionMap);
 				     
-				     new CentralQueryTask("http://10.10.66.12:8000/central/receive_hdg_and_dis", wifiMotion).execute(c);
+				     //new CentralQueryTask(CENTRAL_DYNAMIC_URL, wifiMotion).execute(c);
 				     
 				     
-				     Log.d("status", (Integer.valueOf(finalResult.getInt("status")).toString()));
-				     Log.d("location", finalResult.getString("location"));
-				     Log.d("confidence", (Double.valueOf(finalResult.getDouble("confidence")).toString()));
+				     Log.d("WiFi status", (Integer.valueOf(finalResult.getInt("status")).toString()));
+				     Log.d("WiFi location", finalResult.getString("location"));
+				     Log.d("WiFi confidence", (Double.valueOf(finalResult.getDouble("confidence")).toString()));
 				     
 				     
 				     
@@ -782,32 +818,18 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 
 	    @Override
 	    public void onPictureTaken(byte[] data, Camera camera) {
-
-	        File pictureFile = getOutputMediaFile(MEDIA_TYPE_IMAGE);
-	        if (pictureFile == null){
-	            Log.d("TAG3: ", "Error creating media file, check storage permissions!");
-	            return;
-	        }
-
-	        try {
-	            FileOutputStream fos = new FileOutputStream(pictureFile);
-	            fos.write(data);
-	            fos.close();
-	        } catch (FileNotFoundException e) {
-	            Log.d("TAG4: ", "File not found: " + e.getMessage());
-	        } catch (IOException e) {
-	            Log.d("TAG5: ", "Error accessing file: " + e.getMessage());
-	        }
+	        getOutputMediaFile();
 	    }
 	};
 	
 	
 	
-	/** Create a File for saving an image or video */
-	private static File getOutputMediaFile(int type){
+	/** Create a File for saving a photo */
+	private void getOutputMediaFile(){
 	    // To be safe, you should check that the SDCard is mounted
 	    // using Environment.getExternalStorageState() before doing this.
-
+		
+		
 	    File mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(
 	              Environment.DIRECTORY_PICTURES), "LocalizingImages");
 	    // This location works best if you want the created images to be shared
@@ -817,24 +839,30 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	    if (! mediaStorageDir.exists()){
 	        if (! mediaStorageDir.mkdirs()){
 	            Log.d("LocalizingImages", "failed to create directory");
-	            return null;
 	        }
 	    }
 
 	    // Create a media file name
 	    String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-	    File mediaFile;
-	    if (type == MEDIA_TYPE_IMAGE){
-	        mediaFile = new File(mediaStorageDir.getPath() + File.separator +
-	        "IMG_"+ timeStamp + ".jpg");
-	    } else if(type == MEDIA_TYPE_VIDEO) {
-	        mediaFile = new File(mediaStorageDir.getPath() + File.separator +
-	        "VID_"+ timeStamp + ".mp4");
-	    } else {
-	        return null;
+	    File mediaFile = new File(mediaStorageDir.getPath() + File.separator +
+		        				"IMG_"+ timeStamp + ".jpeg");;
+
+	    
+	    FileInputStream fis = null;
+	    try {
+	        fis = new FileInputStream(mediaFile);
+	    } 
+	    catch (FileNotFoundException e) {
+	        e.printStackTrace();
 	    }
 
-	    return mediaFile;
+	    Bitmap bm = BitmapFactory.decodeStream(fis);
+	    ByteArrayOutputStream baos = new ByteArrayOutputStream();  
+	    bm.compress(Bitmap.CompressFormat.JPEG, 100 , baos);    
+	    image = baos.toByteArray(); 
+	    //encImage = Base64.encodeToString(b, Base64.DEFAULT);
+	    
+	    mediaFile.delete();
 	}
 	
 	
@@ -872,11 +900,11 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				
 				motionMap.put("hdg", (double)orientation[0]);
 				motionMap.put("dis", detector.stepLength);
-				motionMap.put("wifiResponse", WiFiResponse);
+				motionMap.put("wifiResponse", wifiResponse);
 				
 				motion = new JSONObject(motionMap);
 				
-				new CentralQueryTask("http://10.10.66.12:8000/central/receive_hdg_and_dis", motion).execute(this.getApplicationContext());
+				new CentralQueryTask(CENTRAL_DYNAMIC_URL, motion).execute(this.getApplicationContext());
 				return detector.stepLength;
 			}
 		}
