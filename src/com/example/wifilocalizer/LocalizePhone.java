@@ -106,7 +106,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	
 	private float[] cameraPose = new float[3], orientation = new float[3];
 	
-	private boolean DEVELOPER_MODE = true, mAppStopped;
+	private boolean DEVELOPER_MODE = false, mAppStopped;
 	
 	private BroadcastReceiver receiver;
 
@@ -209,9 +209,10 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				Collections.sort(scanResults, new ScanComparable());
 			
 				for (ScanResult scan : scanResults) {
-					int linearLevel = WifiManager.calculateSignalLevel(scan.level, 99);
+					//int linearLevel = WifiManager.calculateSignalLevel(scan.level, 99);
 					
-					macRSSI.put(scan.BSSID.toString(), scan.level*100-linearLevel);
+					//macRSSI.put(scan.BSSID.toString(), scan.level*100-linearLevel);
+					macRSSI.put(scan.BSSID.toString(), scan.level);
 				}
 				
 				
@@ -346,7 +347,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	                timestamp = System.currentTimeMillis();
 	                camera.takePicture(null, null, mPicture);
 	                camera.startPreview();
-	                handler.postDelayed(this, 2000);
+	                handler.postDelayed(this, 3000);
 	                }
 	                
 	            }
@@ -399,6 +400,9 @@ public class LocalizePhone extends Activity implements SensorEventListener {
         
         
         protected Void doInBackground(Context... c) {
+        	
+        	Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
+        	
 			byte[] data = json.toString().getBytes();
 		
 			try {
@@ -481,6 +485,9 @@ public class LocalizePhone extends Activity implements SensorEventListener {
         
         
         protected Void doInBackground(Context... c) {
+        	
+        	Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
+        	
 			byte[] data = json.toString().getBytes();
 		
 			try {
@@ -564,6 +571,9 @@ public class LocalizePhone extends Activity implements SensorEventListener {
         
         
         protected Void doInBackground(Context... c) {
+        	
+        	Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
+        	
 			byte[] data = json.toString().getBytes();
 		
 			try {
@@ -621,7 +631,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				     
 				     JSONObject wifiMotion = new JSONObject(motionMap);
 				     
-				     new CentralQueryTask("http://10.10.67.153:8000/central/receive_hdg_and_dis", wifiMotion).execute(c);
+				     new CentralQueryTask("http://10.10.66.12:8000/central/receive_hdg_and_dis", wifiMotion).execute(c);
 				     
 				     
 				     Log.d("status", (Integer.valueOf(finalResult.getInt("status")).toString()));
@@ -852,10 +862,10 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 		
 		if (stepDetected) {
 			if (signalPowerOutOfRange) {
-				Log.d("Step Invalid", "Power out of range!");
+				Log.d("Invalid Step", "Power out of range!");
 				return -10.0;
 			} else {
-				Log.d("Step", "Valid step!");
+				Log.d("Valid Step", "Valid step!");
 				
 				JSONObject motion;
 				HashMap<String, Object> motionMap = new HashMap<String, Object>();
@@ -866,7 +876,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				
 				motion = new JSONObject(motionMap);
 				
-				new CentralQueryTask("http://10.10.67.153:8000/central/receive_hdg_and_dis", motion).execute(this.getApplicationContext());
+				new CentralQueryTask("http://10.10.66.12:8000/central/receive_hdg_and_dis", motion).execute(this.getApplicationContext());
 				return detector.stepLength;
 			}
 		}

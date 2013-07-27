@@ -99,7 +99,7 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 	
 	private float[] cameraPose = new float[3], orientation = new float[3];
 	
-	private boolean DEVELOPER_MODE = true, mAppStopped;
+	private boolean DEVELOPER_MODE = false, mAppStopped;
 	
 	private BroadcastReceiver receiver;
 
