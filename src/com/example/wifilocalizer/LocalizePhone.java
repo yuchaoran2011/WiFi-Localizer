@@ -465,16 +465,6 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				     overallResponse = new JSONObject(overallMap);
 				     
 				     
-				     /*
-				     HashMap<String, Object> motionMap = new HashMap<String, Object>();
-				     motionMap.put("hdg", -500);
-				     motionMap.put("dis", 1000);
-				     motionMap.put("imageResponse", imageResponse);
-
-				     
-				     JSONObject imageMotion = new JSONObject(motionMap);
-				     */
-				     
 				     new CentralQueryTask(CENTRAL_STATIC_URL, overallResponse).execute(c);
 				     
 				     
@@ -552,12 +542,31 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				     out.flush();
 				     
 				     
+				     // Parse response sent from WiFi localization server
 				     InputStream in = new BufferedInputStream(urlConnection.getInputStream());
-				     readStream(in);
+				     BufferedReader br = new BufferedReader(new InputStreamReader(in));
+				     
+				     
+				     StringBuilder builder = new StringBuilder();
+				     String line = null;
+				     for (; (line = br.readLine()) != null;) {
+				         builder.append(line).append("\n");
+				     }     
+				     
+				     
+				     JSONTokener tokener = new JSONTokener(builder.toString());
+				     JSONObject finalResult = new JSONObject(tokener);
+				     
+				     Log.d("central_x", (Double.valueOf(finalResult.getDouble("x")).toString()));
+				     Log.d("central_y", (Double.valueOf(finalResult.getDouble("y")).toString()));
+				     		     
 				     
 				     in.close();
 				     out.close();
-				   }
+				   }catch (JSONException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
 				    finally {
 				     urlConnection.disconnect();
 				    }
@@ -568,24 +577,6 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 			catch (IOException e) {Log.d("URL_EXCEPTION","FAILURE!"+ e.getMessage()); }
 			
 			return null;
-        }
-        
-        
-        private String readStream(InputStream is) {
-            try {
-              ByteArrayOutputStream bo = new ByteArrayOutputStream();
-              int i = is.read();
-              while(i != -1) {
-                bo.write(i);
-                i = is.read();
-              }
-              return bo.toString();
-            } catch (IOException e) {
-            	
-              Log.d("readStreamException", "Read Stream failed!!");
-              return "";
-         
-            }
         }
     }
 	
@@ -659,15 +650,9 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				     wifiResponseMap.put("location", finalResult.getString("location"));
 				     wifiResponseMap.put("confidence", (Double.valueOf(finalResult.getDouble("confidence")).toString()));
 				     wifiResponse = new JSONObject(wifiResponseMap);
+				 
 				     
-				     //HashMap<String, Object> motionMap = new HashMap<String, Object>();
-				     //motionMap.put("hdg", -500);
-				     //motionMap.put("dis", 1000);
-				     //motionMap.put("wifiResponse", wifiResponse);
-				     
-				     //JSONObject wifiMotion = new JSONObject(motionMap);
-				     
-				     //new CentralQueryTask(CENTRAL_DYNAMIC_URL, wifiMotion).execute(c);
+				     //new CentralQueryTask(CENTRAL_DYNAMIC_URL, wifiResponse).execute(c);
 				     
 				     
 				     Log.d("WiFi status", (Integer.valueOf(finalResult.getInt("status")).toString()));
@@ -900,7 +885,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				
 				motionMap.put("hdg", (double)orientation[0]);
 				motionMap.put("dis", detector.stepLength);
-				motionMap.put("wifiResponse", wifiResponse);
+				motionMap.put("overallResponse", overallResponse);
 				
 				motion = new JSONObject(motionMap);
 				
