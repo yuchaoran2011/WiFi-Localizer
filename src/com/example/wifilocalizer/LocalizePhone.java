@@ -84,8 +84,8 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	
 	private static final String WIFI_URL = "http://django.kung-fu.org:8001/wifi/submit_fingerprint";
 	private static final String IMAGE_URL = "http://";
-	private static final String CENTRAL_DYNAMIC_URL = "http://10.10.67.153:8000/central/receive_hdg_and_dis";
-	private static final String CENTRAL_STATIC_URL = "http://10.10.66.12:8000/central/static_fusion";
+	private static final String CENTRAL_DYNAMIC_URL = "http://10.10.67.44:8000/central/receive_hdg_and_dis";
+	private static final String CENTRAL_STATIC_URL = "http://10.10.67.44:8000/central/static_fusion";
 	
 
 	
@@ -265,7 +265,9 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				
 							
 				new WifiQueryTask(WIFI_URL, query).execute(c);
-				new ImageQueryTask(IMAGE_URL, imageQuery).execute(c);
+				
+				Log.d("REQUEST", "WiFi Request sent!");
+				//new ImageQueryTask(IMAGE_URL, imageQuery).execute(c);
 				
 				//new CentralQueryTask(CENTRAL_DYNAMIC_URL, motion).execute(c);
 			}
@@ -458,15 +460,6 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				     imageResponse = new JSONObject(imageResponseMap);
 				     
 				     
-				     HashMap<String, JSONObject> overallMap = new HashMap<String, JSONObject>();
-				     overallMap.put("imageResponse", imageResponse);
-				     overallMap.put("wifiResponse", wifiResponse);
-				     
-				     overallResponse = new JSONObject(overallMap);
-				     
-				     
-				     new CentralQueryTask(CENTRAL_STATIC_URL, overallResponse).execute(c);
-				     
 				     
 				     Log.d("Image status", (Integer.valueOf(finalResult.getInt("status")).toString()));
 				     Log.d("Image location", finalResult.getString("local_x") + " " + finalResult.getString("local_y"));
@@ -652,12 +645,15 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				     wifiResponse = new JSONObject(wifiResponseMap);
 				 
 				     
-				     //new CentralQueryTask(CENTRAL_DYNAMIC_URL, wifiResponse).execute(c);
+				     HashMap<String, JSONObject> overallMap = new HashMap<String, JSONObject>();
+				     overallMap.put("imageResponse", imageResponse);
+				     overallMap.put("wifiResponse", wifiResponse);
 				     
+				     overallResponse = new JSONObject(overallMap);  
 				     
-				     Log.d("WiFi status", (Integer.valueOf(finalResult.getInt("status")).toString()));
-				     Log.d("WiFi location", finalResult.getString("location"));
-				     Log.d("WiFi confidence", (Double.valueOf(finalResult.getDouble("confidence")).toString()));
+				     new CentralQueryTask(CENTRAL_DYNAMIC_URL, overallResponse).execute(c);
+				     
+				     Log.d("REQUEST", "Integrated WiFi+Image sent to central server!");
 				     
 				     
 				     
@@ -814,7 +810,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	    // To be safe, you should check that the SDCard is mounted
 	    // using Environment.getExternalStorageState() before doing this.
 		
-		
+		/*
 	    File mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(
 	              Environment.DIRECTORY_PICTURES), "LocalizingImages");
 	    // This location works best if you want the created images to be shared
@@ -847,7 +843,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	    image = baos.toByteArray(); 
 	    //encImage = Base64.encodeToString(b, Base64.DEFAULT);
 	    
-	    mediaFile.delete();
+	    mediaFile.delete();*/
 	}
 	
 	
@@ -890,6 +886,8 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				motion = new JSONObject(motionMap);
 				
 				new CentralQueryTask(CENTRAL_DYNAMIC_URL, motion).execute(this.getApplicationContext());
+				
+				Log.d("REQUEST", "Valid step sent to central server!");
 				return detector.stepLength;
 			}
 		}
