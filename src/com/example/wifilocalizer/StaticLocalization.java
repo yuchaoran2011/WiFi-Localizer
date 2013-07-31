@@ -3,7 +3,6 @@ package com.example.wifilocalizer;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -55,27 +54,10 @@ import android.widget.FrameLayout;
 import android.widget.TextView;
 
 
-/*
-
-class ScanComparable implements Comparator<ScanResult> {
-	 
-    @Override
-    public int compare(ScanResult s1, ScanResult s2) {
-        return (s1.level>s2.level ? -1 : (s1.level==s2.level ? 0 : 1));
-    }
-}*/
-
-
 
 
 public class StaticLocalization extends Activity implements SensorEventListener {
-	
-	@SuppressLint("NewApi")
-	
-	
-	public static final int MEDIA_TYPE_IMAGE = 1;
-	public static final int MEDIA_TYPE_VIDEO = 2;
-	
+
 
 	private long timestamp;
 	
@@ -210,7 +192,6 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 							
 				new WifiQueryTask("http://django.kung-fu.org:8001/wifi/submit_fingerprint", query).execute(c);
 				//new ImageQueryTask("https://", params).execute(c);
-				//new CentralQueryTask("http://10.10.65.182:8000/central/receive_hdg_and_dis", motion).execute(c);
 			}
 			}
 		}
@@ -289,18 +270,19 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 	            public void run() 
 	            {
 	            	if(!mAppStopped) {
-	            	camera.startPreview();
-	                scan();
-	                timestamp = System.currentTimeMillis();
-	                camera.takePicture(null, null, mPicture);
-	                camera.startPreview();
-	                handler.postDelayed(this, 5000);
+	            		
+	            		camera.startPreview();
+	            		scan();
+	            		timestamp = System.currentTimeMillis();
+	            		camera.takePicture(null, null, mPicture);
+	            		camera.startPreview();
+	            		handler.postDelayed(this, 5000);
 	                }
 	                
 	            }
 	        };
 
-			handler.postDelayed(r, 0);
+			handler.postDelayed(r, 10);
 	        
 			
 			
@@ -376,7 +358,6 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 				     
 				     
 				     InputStream in = new BufferedInputStream(urlConnection.getInputStream());
-				     readStream(in);
 				     
 				     in.close();
 				     out.close();
@@ -391,24 +372,6 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 			catch (IOException e) {Log.d("URL_EXCEPTION","FAILURE!"+ e.getMessage()); }
 			
 			return null;
-        }
-        
-        
-        private String readStream(InputStream is) {
-            try {
-              ByteArrayOutputStream bo = new ByteArrayOutputStream();
-              int i = is.read();
-              while(i != -1) {
-                bo.write(i);
-                i = is.read();
-              }
-              return bo.toString();
-            } catch (IOException e) {
-            	
-              Log.d("readStreamException", "Read Stream failed!!");
-              return "";
-         
-            }
         }
     }
 	
@@ -459,7 +422,6 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 				     
 				     
 				     InputStream in = new BufferedInputStream(urlConnection.getInputStream());
-				     readStream(in);
 				     
 				     in.close();
 				     out.close();
@@ -474,24 +436,6 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 			catch (IOException e) {Log.d("URL_EXCEPTION","FAILURE!"+ e.getMessage()); }
 			
 			return null;
-        }
-        
-        
-        private String readStream(InputStream is) {
-            try {
-              ByteArrayOutputStream bo = new ByteArrayOutputStream();
-              int i = is.read();
-              while(i != -1) {
-                bo.write(i);
-                i = is.read();
-              }
-              return bo.toString();
-            } catch (IOException e) {
-            	
-              Log.d("readStreamException", "Read Stream failed!!");
-              return "";
-         
-            }
         }
     }
 	
@@ -690,7 +634,7 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 	    @Override
 	    public void onPictureTaken(byte[] data, Camera camera) {
 
-	        File pictureFile = getOutputMediaFile(MEDIA_TYPE_IMAGE);
+	        File pictureFile = getOutputMediaFile();
 	        if (pictureFile == null){
 	            Log.d("TAG3: ", "Error creating media file, check storage permissions!");
 	            return;
@@ -712,7 +656,7 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 	
 	/** Create a File for saving an image or video */
 	@SuppressLint("SimpleDateFormat")
-	private static File getOutputMediaFile(int type){
+	private static File getOutputMediaFile(){
 	    // To be safe, you should check that the SDCard is mounted
 	    // using Environment.getExternalStorageState() before doing this.
 
@@ -731,16 +675,8 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 
 	    // Create a media file name
 	    String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-	    File mediaFile;
-	    if (type == MEDIA_TYPE_IMAGE){
-	        mediaFile = new File(mediaStorageDir.getPath() + File.separator +
+	    File mediaFile = new File(mediaStorageDir.getPath() + File.separator +
 	        "IMG_"+ timeStamp + ".jpg");
-	    } else if(type == MEDIA_TYPE_VIDEO) {
-	        mediaFile = new File(mediaStorageDir.getPath() + File.separator +
-	        "VID_"+ timeStamp + ".mp4");
-	    } else {
-	        return null;
-	    }
 
 	    return mediaFile;
 	}
