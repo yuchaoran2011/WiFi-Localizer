@@ -3,10 +3,6 @@ package com.example.wifilocalizer;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -14,10 +10,8 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.text.SimpleDateFormat;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 
@@ -25,7 +19,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 
-import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
@@ -33,8 +26,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.hardware.Camera;
 import android.hardware.Camera.PictureCallback;
 import android.hardware.Sensor;
@@ -46,7 +37,6 @@ import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.StrictMode;
 import android.support.v4.app.NavUtils;
@@ -79,13 +69,11 @@ class ScanComparable implements Comparator<ScanResult> {
 
 public class LocalizePhone extends Activity implements SensorEventListener {
 	
-	@SuppressLint("NewApi")
-	
 	
 	private static final String WIFI_URL = "http://django.kung-fu.org:8001/wifi/submit_fingerprint";
 	private static final String IMAGE_URL = "http://";
-	private static final String CENTRAL_DYNAMIC_URL = "http://10.10.67.44:8000/central/receive_hdg_and_dis";
-	private static final String CENTRAL_STATIC_URL = "http://10.10.67.44:8000/central/static_fusion";
+	private static final String CENTRAL_DYNAMIC_URL = "http://10.10.65.42:8000/central/receive_hdg_and_dis";
+	private static final String CENTRAL_STATIC_URL = "http://10.10.65.42:8000/central/static_fusion";
 	
 
 	
@@ -219,6 +207,8 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 					macRSSI.put(scan.BSSID.toString(), scan.level);
 				}
 				
+				//macRSSI.put("cluster_id", 1);
+				
 				
 				
 				queryCore = new JSONObject(macRSSI);
@@ -256,12 +246,6 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				
 				
 				imageQuery = new JSONObject(imageQueryMap);
-				
-				
-				//motionMap.put("hdg", (double)orientation[0]);
-				//motionMap.put("dis", stepLength);
-				
-				//motion = new JSONObject(motionMap);
 				
 							
 				new WifiQueryTask(WIFI_URL, query).execute(c);
@@ -349,21 +333,24 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 			
 			final Runnable r = new Runnable()
 	        {
+				
 	            public void run() 
 	            {
 	            	if(!mAppStopped) {
-	            	camera.startPreview();
-	                scan();
-	                timestamp = System.currentTimeMillis();
-	                camera.takePicture(null, null, mPicture);
-	                camera.startPreview();
-	                handler.postDelayed(this, 3000);
+	            		
+	            		camera.startPreview();
+	            		scan();
+	            		timestamp = System.currentTimeMillis();
+	            		camera.takePicture(null, null, mPicture);
+	            		camera.startPreview();
+	            		
+	            		handler.postDelayed(this, 5000);
 	                }
 	                
 	            }
 	        };
 
-			handler.postDelayed(r, 0);
+			handler.postDelayed(r, 10);
 	        
 			
 			
@@ -877,11 +864,10 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				Log.d("Valid Step", "Valid step!");
 				
 				JSONObject motion;
-				HashMap<String, Object> motionMap = new HashMap<String, Object>();
+				HashMap<String, Double> motionMap = new HashMap<String, Double>();
 				
 				motionMap.put("hdg", (double)orientation[0]);
 				motionMap.put("dis", detector.stepLength);
-				motionMap.put("overallResponse", overallResponse);
 				
 				motion = new JSONObject(motionMap);
 				
