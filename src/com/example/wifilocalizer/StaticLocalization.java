@@ -3,7 +3,9 @@ package com.example.wifilocalizer;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -30,8 +32,11 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.hardware.Camera;
 import android.hardware.Camera.PictureCallback;
+import android.hardware.Camera.Size;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -58,7 +63,8 @@ import android.widget.TextView;
 
 public class StaticLocalization extends Activity implements SensorEventListener {
 
-
+	static byte[] image;
+	
 	private long timestamp;
 	
 	
@@ -129,8 +135,7 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 		// Code to execute when SCAN_RESULTS_AVAILABLE_ACTION event occurs
 			
 			JSONObject query, queryCore;
-			@SuppressWarnings("unused")
-			JSONObject params, pose, returnParams;
+			JSONObject pose, returnParams;
 			
 			HashMap<String,Integer> macRSSI = new HashMap<String,Integer>();
 			HashMap<String, JSONObject> postedData = new HashMap<String, JSONObject>();
@@ -164,9 +169,9 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 				
 				
 				
-				poseMap.put("latitude", (float)0.0);
-				poseMap.put("longitude", (float)0.0);
-				poseMap.put("altitude", (float)0.0);
+				poseMap.put("latitude", 0f);
+				poseMap.put("longitude", 0f);
+				poseMap.put("altitude", 0f);
 				poseMap.put("yaw", cameraPose[0]);
 				poseMap.put("pitch", cameraPose[1]);
 				poseMap.put("roll", cameraPose[2]);
@@ -174,24 +179,29 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 				pose = new JSONObject(poseMap);
 
 				returnMap.put("statistics", true);
-				returnMap.put("image_data", true);
+				returnMap.put("image_data", false);
 				returnMap.put("estimated_client_pose", true);
 				returnMap.put("pose_visualization_only", false);
 				returnParams = new JSONObject(returnMap);
 				
 				paramsMap.put("method", "client_query");
-				paramsMap.put("user", "test");
-				paramsMap.put("database", "CoryHall");
-				paramsMap.put("deadline_seconds", 2.0);
+				paramsMap.put("user", "chaoran");
+				paramsMap.put("database", "corydb");
+				paramsMap.put("deadline_seconds", 15.0);
 				paramsMap.put("disable_gpu", false);
 				paramsMap.put("perfmode", "fast");
 				paramsMap.put("pose", pose);
 				paramsMap.put("return", returnParams);
 				
-				params = new JSONObject(paramsMap);	
+				
+				HashMap<String, Object> imageQueryMap = new HashMap<String, Object>();
+				imageQueryMap.put("data", image);
+				imageQueryMap.put("params", paramsMap);
+				JSONObject imageQuery = new JSONObject(imageQueryMap);
 							
 				new WifiQueryTask("http://django.kung-fu.org:8001/wifi/submit_fingerprint", query).execute(c);
-				//new ImageQueryTask("https://", params).execute(c);
+				new ImageQueryTask("https://ahvaz.eecs.berkeley.edu/", imageQuery).execute(c);
+				Log.d("ImageQuery", "Image query sent to server!");
 			}
 			}
 		}
@@ -276,7 +286,7 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 	            		timestamp = System.currentTimeMillis();
 	            		camera.takePicture(null, null, mPicture);
 	            		camera.startPreview();
-	            		handler.postDelayed(this, 5000);
+	            		handler.postDelayed(this, 10000);
 	                }
 	                
 	            }
@@ -315,7 +325,6 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 	
 	
 	
-	@SuppressWarnings("unused")
 	private class ImageQueryTask extends AsyncTask<Context, Void, Void> 
     {
         private String url_str;
@@ -357,11 +366,32 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 				     out.flush();
 				     
 				     
+				     // Parse response sent from image localization server
 				     InputStream in = new BufferedInputStream(urlConnection.getInputStream());
+				     BufferedReader br = new BufferedReader(new InputStreamReader(in));
+				     
+				     
+				     StringBuilder builder = new StringBuilder();
+				     String line = null;
+				     for (; (line = br.readLine()) != null;) {
+				         builder.append(line).append("\n");
+				     }     
+				     
+				     
+				     JSONTokener tokener = new JSONTokener(builder.toString());
+				     JSONObject finalResult = new JSONObject(tokener);
+				     
+				   
+				     Log.d("ImageResponse", finalResult.getString("local_x") + " " + finalResult.getString("local_y"));
+				     Log.d("ImageResponse", (Double.valueOf(finalResult.getDouble("overall_confidence")).toString()));
+				          
 				     
 				     in.close();
 				     out.close();
-				   }
+				   } catch (JSONException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
 				    finally {
 				     urlConnection.disconnect();
 				    }
@@ -614,6 +644,16 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 
 	        // set preview size and make any resize, rotate or
 	        // reformatting changes here
+	        Camera.Parameters parameters = mCamera.getParameters();
+	        List<Size> sizes = parameters.getSupportedPictureSizes();
+	        /*
+	        for (Size s: sizes) {
+	        	Log.d("size", s.width + " " + s.height);
+	        }
+	       	*/
+	        parameters.setPictureSize(sizes.get(5).width, sizes.get(5).height);
+	        mCamera.setParameters(parameters);
+	        
 
 	        // start preview with new settings
 	        try {
@@ -634,6 +674,9 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 	    @Override
 	    public void onPictureTaken(byte[] data, Camera camera) {
 
+	    	//getOutputMediaFile();
+	    
+	    	
 	        File pictureFile = getOutputMediaFile();
 	        if (pictureFile == null){
 	            Log.d("TAG3: ", "Error creating media file, check storage permissions!");
@@ -649,8 +692,26 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 	        } catch (IOException e) {
 	            Log.d("TAG5: ", "Error accessing file: " + e.getMessage());
 	        }
+	        
+	        
+	        FileInputStream fis = null;
+		    try {
+		        fis = new FileInputStream(pictureFile);
+		    } 
+		    catch (FileNotFoundException e) {
+		        e.printStackTrace();
+		    }
+
+		    Bitmap bm = BitmapFactory.decodeStream(fis);
+		    ByteArrayOutputStream baos = new ByteArrayOutputStream();  
+		    bm.compress(Bitmap.CompressFormat.JPEG, 100 , baos);    
+		    image = baos.toByteArray(); 
+		    //encImage = Base64.encodeToString(b, Base64.DEFAULT);
+		    
+		    //pictureFile.delete();
 	    }
 	};
+	
 	
 	
 	
@@ -677,7 +738,7 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 	    String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
 	    File mediaFile = new File(mediaStorageDir.getPath() + File.separator +
 	        "IMG_"+ timeStamp + ".jpg");
-
+	    
 	    return mediaFile;
 	}
 	
@@ -728,9 +789,9 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 		   
 		   if (currTimestamp >= timestamp) {
 			   SensorManager.getOrientation(rotationMatrix, orientation);
-			   cameraPose[0] = (float) Math.round(Math.toDegrees(orientation[2])*100)/100; // Row
+			   cameraPose[2] = (float) Math.round(Math.toDegrees(orientation[2])*100)/100; // Row
 			   cameraPose[1] = (float) Math.round(Math.toDegrees(orientation[1])*100)/100; // Pitch
-			   cameraPose[2] = (float) Math.round(Math.toDegrees(orientation[0])*100)/100; // Yaw
+			   cameraPose[0] = (float) Math.round(Math.toDegrees(orientation[0])*100)/100; // Yaw
 			   //Log.d("ORIENTATION", cameraPose[0]+" "+cameraPose[1]+" "+cameraPose[2]);
 			   Log.d("YAW", cameraPose[2] + "");
 		   }

@@ -1,23 +1,12 @@
 package com.example.wifilocalizer;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 
-import org.json.JSONException;
 import org.json.JSONObject;
-import org.json.JSONTokener;
 
 import android.annotation.TargetApi;
 import android.app.Activity;
@@ -25,7 +14,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.pm.PackageManager;
 import android.hardware.Camera;
 import android.hardware.Camera.PictureCallback;
 import android.hardware.Sensor;
@@ -34,7 +22,6 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
-import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -47,6 +34,7 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.widget.FrameLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 import cz.muni.fi.sandbox.dsp.filters.ContinuousConvolution;
 import cz.muni.fi.sandbox.dsp.filters.FrequencyCounter;
 import cz.muni.fi.sandbox.dsp.filters.SinXPiWindow;
@@ -66,14 +54,13 @@ class ScanComparable implements Comparator<ScanResult> {
 
 
 
-
 public class LocalizePhone extends Activity implements SensorEventListener {
 	
 	
-	private static final String WIFI_URL = "http://django.kung-fu.org:8001/wifi/submit_fingerprint";
-	private static final String IMAGE_URL = "http://ahvaz.eecs.berkeley.edu/";
-	private static final String CENTRAL_DYNAMIC_URL = "http://10.10.65.10:8000/central/receive_hdg_and_dis";
-	private static final String CENTRAL_STATIC_URL = "http://10.10.65.10:8000/central/static_fusion";
+	static final String WIFI_URL = "http://django.kung-fu.org:8001/wifi/submit_fingerprint";
+	static final String IMAGE_URL = "http://ahvaz.eecs.berkeley.edu/";
+	static final String CENTRAL_DYNAMIC_URL = "http://10.10.65.224:8000/central/receive_hdg_and_dis";
+	static final String CENTRAL_STATIC_URL = "http://10.10.65.224:8000/central/static_fusion";
 	
 
 	
@@ -123,7 +110,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	
 	double stepLength = -10.0;
 	
-	JSONObject wifiResponse, imageResponse, overallResponse;
+	static JSONObject wifiResponse, imageResponse, overallResponse;
 	static byte[] image;
 	
 
@@ -207,8 +194,9 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 					macRSSI.put(scan.BSSID.toString(), scan.level);
 				}
 				
-				//macRSSI.put("cluster_id", 1);
 				
+				macRSSI.put("cluster_id", 1); // Set fingerprint database as 2nd floor of Cory Hall
+				macRSSI.put("freq_filter", 3000); // Scanning frequencies below 3GHz
 				
 				
 				queryCore = new JSONObject(macRSSI);
@@ -217,8 +205,8 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				
 				
 				
-				poseMap.put("latitude", (float)0.0);
-				poseMap.put("longitude", (float)0.0);
+				poseMap.put("latitude", 0f);
+				poseMap.put("longitude", 0f);
 				poseMap.put("altitude", (float)0.0);
 				poseMap.put("yaw", cameraPose[0]);
 				poseMap.put("pitch", cameraPose[1]);
@@ -234,8 +222,8 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				
 				paramsMap.put("method", "client_query");
 				paramsMap.put("user", "test");
-				paramsMap.put("database", "CoryHall");
-				paramsMap.put("deadline_seconds", 5.0);
+				paramsMap.put("database", "corydb");
+				paramsMap.put("deadline_seconds", 15.0);
 				paramsMap.put("disable_gpu", false);
 				paramsMap.put("perfmode", "fast");
 				paramsMap.put("pose", pose);
@@ -252,8 +240,6 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				
 				Log.d("REQUEST", "WiFi Request sent!");
 				//new ImageQueryTask(IMAGE_URL, imageQuery).execute(c);
-				
-				//new CentralQueryTask(CENTRAL_DYNAMIC_URL, motion).execute(c);
 			}
 		}
 		}
@@ -344,7 +330,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	            		camera.takePicture(null, null, mPicture);
 	            		camera.startPreview();
 	            		
-	            		handler.postDelayed(this, 5000);
+	            		handler.postDelayed(this, 1000);
 	                }
 	                
 	            }
@@ -382,287 +368,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	
 	
 	
-	private class ImageQueryTask extends AsyncTask<Context, Void, Void> 
-    {
-        private String url_str;
-        private JSONObject json;
-
-        public ImageQueryTask(String url, JSONObject json)
-        {
-            this.url_str = url;
-            this.json = json;
-        }
-        
-        
-        protected Void doInBackground(Context... c) {
-        	
-        	Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
-        	
-			byte[] data = json.toString().getBytes();
-		
-			try {
-				
-				URL url = new URL(url_str);
-		
-				
-				HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
-				   try {
-					 urlConnection.setReadTimeout( 10000 /*milliseconds*/ );
-					 urlConnection.setConnectTimeout( 15000 /* milliseconds */ );
-					   
-					 urlConnection.setDoInput(true);
-				     urlConnection.setDoOutput(true);
-				     urlConnection.setFixedLengthStreamingMode(data.length);
-				     
-				     urlConnection.setRequestProperty("content-type","application/json; charset=utf-8");
-				     urlConnection.setRequestProperty("Accept", "application/json");
-				     urlConnection.setRequestMethod("POST");
-
-				     urlConnection.connect();
-				     OutputStream out = new BufferedOutputStream(urlConnection.getOutputStream());
-			
-				     out.write(data);
-				     Log.d("DATA", json.toString());
-				     out.flush();
-				     
-				     
-				     // Parse response sent from Wherelab image localization server
-				     InputStream in = new BufferedInputStream(urlConnection.getInputStream());
-				     BufferedReader br = new BufferedReader(new InputStreamReader(in));
-				     
-				     
-				     StringBuilder builder = new StringBuilder();
-				     String line = null;
-				     for (; (line = br.readLine()) != null;) {
-				         builder.append(line).append("\n");
-				     }     
-				     
-				     
-				     JSONTokener tokener = new JSONTokener(builder.toString());
-				     JSONObject finalResult = new JSONObject(tokener); 
-				   
-				     HashMap<String, String> imageResponseMap = new HashMap<String, String>();
-				     imageResponseMap.put("location", (Integer.valueOf(finalResult.getInt("local_x")).toString()) + " " +(Integer.valueOf(finalResult.getInt("local_y")).toString()));
-				     imageResponseMap.put("confidence", (Double.valueOf(finalResult.getDouble("overall_confidence")).toString()));
-				     imageResponse = new JSONObject(imageResponseMap);
-				     
-				     
-				     
-				     Log.d("Image status", (Integer.valueOf(finalResult.getInt("status")).toString()));
-				     Log.d("Image location", finalResult.getString("local_x") + " " + finalResult.getString("local_y"));
-				     Log.d("Image confidence", (Double.valueOf(finalResult.getDouble("overall_confidence")).toString()));
-				     
-				     
-				     
-				     in.close();
-				     out.close();
-				     
-				   } catch (JSONException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-					    finally {
-					     urlConnection.disconnect();
-					    }
-				Log.d("URL_CONNECTION","SUCCESS!");
-			}
-			catch (MalformedURLException e){ }
-			catch (IOException e) {Log.d("URL_EXCEPTION","FAILURE!"+ e.getMessage()); }
-			
-			return null;
-        }
-    }
 	
-	
-	
-	
-	
-	
-	private class CentralQueryTask extends AsyncTask<Context, Void, Void> 
-    {
-        private String url_str;
-        private JSONObject json;
-
-        public CentralQueryTask(String url, JSONObject json)
-        {
-            this.url_str = url;
-            this.json = json;
-        }
-        
-        
-        protected Void doInBackground(Context... c) {
-        	
-        	Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
-        	
-			byte[] data = json.toString().getBytes();
-		
-			try {
-				
-				URL url = new URL(url_str);
-		
-				
-				HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
-				   try {
-					 urlConnection.setReadTimeout( 10000 /*milliseconds*/ );
-					 urlConnection.setConnectTimeout( 15000 /* milliseconds */ );
-					   
-					 urlConnection.setDoInput(true);
-				     urlConnection.setDoOutput(true);
-				     urlConnection.setFixedLengthStreamingMode(data.length);
-				     
-				     urlConnection.setRequestProperty("content-type","application/json; charset=utf-8");
-				     urlConnection.setRequestProperty("Accept", "application/json");
-				     urlConnection.setRequestMethod("POST");
-
-				     urlConnection.connect();
-				     OutputStream out = new BufferedOutputStream(urlConnection.getOutputStream());
-			
-				     out.write(data);
-				     Log.d("DATA", json.toString());
-				     out.flush();
-				     
-				     
-				     // Parse response sent from WiFi localization server
-				     InputStream in = new BufferedInputStream(urlConnection.getInputStream());
-				     BufferedReader br = new BufferedReader(new InputStreamReader(in));
-				     
-				     
-				     StringBuilder builder = new StringBuilder();
-				     String line = null;
-				     for (; (line = br.readLine()) != null;) {
-				         builder.append(line).append("\n");
-				     }     
-				     
-				     
-				     JSONTokener tokener = new JSONTokener(builder.toString());
-				     JSONObject finalResult = new JSONObject(tokener);
-				     
-				     Log.d("central_x", (Double.valueOf(finalResult.getDouble("x")).toString()));
-				     Log.d("central_y", (Double.valueOf(finalResult.getDouble("y")).toString()));
-				     		     
-				     
-				     in.close();
-				     out.close();
-				   }catch (JSONException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-				    finally {
-				     urlConnection.disconnect();
-				    }
-				  
-				Log.d("URL_CONNECTION","SUCCESS!");
-			}
-			catch (MalformedURLException e){ }
-			catch (IOException e) {Log.d("URL_EXCEPTION","FAILURE!"+ e.getMessage()); }
-			
-			return null;
-        }
-    }
-	
-
-	
-
-	
-	
-	private class WifiQueryTask extends AsyncTask<Context, Void, Void> 
-    {
-        private String url_str;
-        private JSONObject json;
-
-        public WifiQueryTask(String url, JSONObject json)
-        {
-            this.url_str = url;
-            this.json = json;
-        }
-        
-        
-        protected Void doInBackground(Context... c) {
-        	
-        	Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
-        	
-			byte[] data = json.toString().getBytes();
-		
-			try {
-				
-				URL url = new URL(url_str);
-		
-				
-				HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
-				   try {
-					 urlConnection.setReadTimeout( 10000 /*milliseconds*/ );
-					 urlConnection.setConnectTimeout( 15000 /* milliseconds */ );
-					   
-					 urlConnection.setDoInput(true);
-				     urlConnection.setDoOutput(true);
-				     urlConnection.setFixedLengthStreamingMode(data.length);
-				     
-				     urlConnection.setRequestProperty("content-type","application/json; charset=utf-8");
-				     urlConnection.setRequestProperty("Accept", "application/json");
-				     urlConnection.setRequestMethod("POST");
-
-				     urlConnection.connect();
-				     OutputStream out = new BufferedOutputStream(urlConnection.getOutputStream());
-			
-				     out.write(data);
-				     Log.d("DATA", json.toString());
-				     out.flush();
-				     
-				     
-				     // Parse response sent from WiFi localization server
-				     InputStream in = new BufferedInputStream(urlConnection.getInputStream());
-				     BufferedReader br = new BufferedReader(new InputStreamReader(in));
-				     
-				     
-				     StringBuilder builder = new StringBuilder();
-				     String line = null;
-				     for (; (line = br.readLine()) != null;) {
-				         builder.append(line).append("\n");
-				     }     
-				     
-				     
-				     JSONTokener tokener = new JSONTokener(builder.toString());
-				     JSONObject finalResult = new JSONObject(tokener);
-				     
-				   
-				     HashMap<String, String> wifiResponseMap = new HashMap<String, String>();
-				     wifiResponseMap.put("status", (Integer.valueOf(finalResult.getInt("status")).toString()));
-				     wifiResponseMap.put("location", finalResult.getString("location"));
-				     wifiResponseMap.put("confidence", (Double.valueOf(finalResult.getDouble("confidence")).toString()));
-				     wifiResponse = new JSONObject(wifiResponseMap);
-				 
-				     
-				     HashMap<String, JSONObject> overallMap = new HashMap<String, JSONObject>();
-				     overallMap.put("imageResponse", imageResponse);
-				     overallMap.put("wifiResponse", wifiResponse);
-				     
-				     overallResponse = new JSONObject(overallMap);  
-				     
-				     new CentralQueryTask(CENTRAL_DYNAMIC_URL, overallResponse).execute(c);
-				     
-				     Log.d("REQUEST", "Integrated WiFi+Image sent to central server!");
-				     
-				     
-				     
-				     in.close();
-				     out.close();
-				     
-				   } catch (JSONException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-				    finally {
-				     urlConnection.disconnect();
-				    }
-				  
-				Log.d("URL_CONNECTION","SUCCESS!");
-			}
-			catch (MalformedURLException e){ }
-			catch (IOException e) {Log.d("URL_EXCEPTION","FAILURE!"+ e.getMessage()); }
-			
-			return null;
-        }
-    }
 	
 
 	
@@ -690,20 +396,6 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	
 	
 	/*******    Camera Code     ********/
-	
-	/* Check if this device has a camera */
-	@SuppressWarnings("unused")
-	private boolean checkCameraHardware(Context context) {
-	    if (context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA)){
-	        // this device has a camera
-	        return true;
-	    } else {
-	        // no camera on this device
-	        return false;
-	    }
-	}
-	
-	
 	
 	/** A safe way to get an instance of the Camera object. */
 	public static Camera getCameraInstance(){
@@ -831,9 +523,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	    //encImage = Base64.encodeToString(b, Base64.DEFAULT);
 	    
 	    mediaFile.delete();*/
-	}
-	
-	
+	}	
 	
 	
 	
@@ -862,6 +552,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				return -10.0;
 			} else {
 				Log.d("Valid Step", "Valid step!");
+				Toast.makeText(this.getApplicationContext(), "Step detected!", Toast.LENGTH_SHORT).show();
 				
 				JSONObject motion;
 				HashMap<String, Double> motionMap = new HashMap<String, Double>();
@@ -936,9 +627,9 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 		   
 		   if (currTimestamp >= timestamp) {
 			   SensorManager.getOrientation(rotationMatrix, orientation);
-			   cameraPose[0] = (float) Math.round(Math.toDegrees(orientation[2])*100)/100; // Row
+			   cameraPose[2] = (float) Math.round(Math.toDegrees(orientation[2])*100)/100; // Row
 			   cameraPose[1] = (float) Math.round(Math.toDegrees(orientation[1])*100)/100; // Pitch
-			   cameraPose[2] = (float) Math.round(Math.toDegrees(orientation[0])*100)/100; // Yaw
+			   cameraPose[0] = (float) Math.round(Math.toDegrees(orientation[0])*100)/100; // Yaw
 			   //Log.d("ORIENTATION", cameraPose[0]+" "+cameraPose[1]+" "+cameraPose[2]);
 			   Log.d("YAW", cameraPose[2] + "");
 		   }
