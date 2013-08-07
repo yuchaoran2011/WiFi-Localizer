@@ -21,6 +21,16 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 
+import org.apache.http.HttpVersion;
+import org.apache.http.client.ResponseHandler;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.mime.HttpMultipartMode;
+import org.apache.http.entity.mime.MultipartEntity;
+import org.apache.http.entity.mime.content.FileBody;
+import org.apache.http.entity.mime.content.StringBody;
+import org.apache.http.impl.client.BasicResponseHandler;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.params.CoreProtocolPNames;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
@@ -50,6 +60,7 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.StrictMode;
 import android.support.v4.app.NavUtils;
+import android.util.Base64;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -88,6 +99,11 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 	private float[] cameraPose = new float[3], orientation = new float[3];
 	
 	private boolean DEVELOPER_MODE = false, mAppStopped;
+	
+	File pictureFile;
+	String encImage;
+	JSONObject JSONParams;
+	
 	
 	private BroadcastReceiver receiver;
 
@@ -135,13 +151,9 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 		// Code to execute when SCAN_RESULTS_AVAILABLE_ACTION event occurs
 			
 			JSONObject query, queryCore;
-			JSONObject pose, returnParams;
 			
 			HashMap<String,Integer> macRSSI = new HashMap<String,Integer>();
 			HashMap<String, JSONObject> postedData = new HashMap<String, JSONObject>();
-			HashMap<String, Float> poseMap = new HashMap<String, Float>();
-			HashMap<String, Boolean> returnMap = new HashMap<String, Boolean>();
-			HashMap<String, Object> paramsMap = new HashMap<String, Object>();
   			
 			
 			List<ScanResult> scanResults = wifi.getScanResults();
@@ -169,38 +181,37 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 				
 				
 				
-				poseMap.put("latitude", 0f);
-				poseMap.put("longitude", 0f);
-				poseMap.put("altitude", 0f);
-				poseMap.put("yaw", cameraPose[0]);
-				poseMap.put("pitch", cameraPose[1]);
-				poseMap.put("roll", cameraPose[2]);
-				poseMap.put("ambiguity_meters", (float)1.0e+126);
-				pose = new JSONObject(poseMap);
-
-				returnMap.put("statistics", true);
-				returnMap.put("image_data", false);
-				returnMap.put("estimated_client_pose", true);
-				returnMap.put("pose_visualization_only", false);
-				returnParams = new JSONObject(returnMap);
 				
-				paramsMap.put("method", "client_query");
-				paramsMap.put("user", "chaoran");
-				paramsMap.put("database", "corydb");
-				paramsMap.put("deadline_seconds", 15.0);
-				paramsMap.put("disable_gpu", false);
-				paramsMap.put("perfmode", "fast");
-				paramsMap.put("pose", pose);
-				paramsMap.put("return", returnParams);
+				JSONParams = new JSONObject();
+				try {
+				JSONParams.put("method", "client_query");
+				JSONParams.put("user", "chaoran");
+				JSONParams.put("database", "corydb");
+				JSONParams.put("deadline_seconds", 60.0);
+				JSONObject JSONPose = new JSONObject();
+					JSONPose.put("latitude", 0);
+					JSONPose.put("longitude", 0);
+					JSONPose.put("yaw", cameraPose[0]);
+					JSONPose.put("pitch", cameraPose[1]);
+					JSONPose.put("roll", cameraPose[2]);
+					JSONPose.put("ambiguity_meters", 1e99); //hack for now
+				JSONParams.put("pose",JSONPose);
+				JSONObject JSONReturn = new JSONObject();
+				    JSONReturn.put("statistics", true);
+					JSONReturn.put("estimated_client_pose", true);
+					JSONReturn.put("image_data", false);
+					JSONReturn.put("image_only", false);
+					JSONReturn.put("pose_visualization_only", false);
+				JSONParams.put("return", JSONReturn);}
 				
+				catch (JSONException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 				
-				HashMap<String, Object> imageQueryMap = new HashMap<String, Object>();
-				imageQueryMap.put("data", image);
-				imageQueryMap.put("params", paramsMap);
-				JSONObject imageQuery = new JSONObject(imageQueryMap);
 							
 				new WifiQueryTask("http://django.kung-fu.org:8001/wifi/submit_fingerprint", query).execute(c);
-				new ImageQueryTask("https://ahvaz.eecs.berkeley.edu/", imageQuery).execute(c);
+				new ImageQueryTask("http://ahvaz.eecs.berkeley.edu:80/").execute(c);
 				Log.d("ImageQuery", "Image query sent to server!");
 			}
 			}
@@ -324,21 +335,17 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 	
 	
 	
-	
 	private class ImageQueryTask extends AsyncTask<Context, Void, Void> 
     {
         private String url_str;
-        private JSONObject json;
 
-        public ImageQueryTask(String url, JSONObject json)
+        public ImageQueryTask(String url)
         {
             this.url_str = url;
-            this.json = json;
         }
         
         
         protected Void doInBackground(Context... c) {
-			byte[] data = json.toString().getBytes();
 		
 			try {
 				
@@ -347,47 +354,23 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 				
 				HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
 				   try {
-					 urlConnection.setReadTimeout( 10000 /*milliseconds*/ );
-					 urlConnection.setConnectTimeout( 15000 /* milliseconds */ );
+					   DefaultHttpClient client = new DefaultHttpClient();
+						client.getParams().setParameter(CoreProtocolPNames.PROTOCOL_VERSION, HttpVersion.HTTP_1_1);
+						HttpPost httppost = new HttpPost(url.toString());
+						MultipartEntity entity = new MultipartEntity(HttpMultipartMode.BROWSER_COMPATIBLE);					
+					
+						entity.addPart("params", new StringBody(JSONParams.toString()));
+						entity.addPart("data", new FileBody(pictureFile));
+						
+						httppost.setEntity(entity);
+						
+						
+						ResponseHandler<String> res = new BasicResponseHandler();
+						String response = client.execute(httppost, res);
+						JSONObject JSONResponse = new JSONObject(response);
+						Log.d("ImageResponse", JSONResponse.toString());
+						
 					   
-					 urlConnection.setDoInput(true);
-				     urlConnection.setDoOutput(true);
-				     urlConnection.setFixedLengthStreamingMode(data.length);
-				     
-				     urlConnection.setRequestProperty("content-type","application/json; charset=utf-8");
-				     urlConnection.setRequestProperty("Accept", "application/json");
-				     urlConnection.setRequestMethod("POST");
-
-				     urlConnection.connect();
-				     OutputStream out = new BufferedOutputStream(urlConnection.getOutputStream());
-			
-				     out.write(data);
-				     Log.d("DATA", json.toString());
-				     out.flush();
-				     
-				     
-				     // Parse response sent from image localization server
-				     InputStream in = new BufferedInputStream(urlConnection.getInputStream());
-				     BufferedReader br = new BufferedReader(new InputStreamReader(in));
-				     
-				     
-				     StringBuilder builder = new StringBuilder();
-				     String line = null;
-				     for (; (line = br.readLine()) != null;) {
-				         builder.append(line).append("\n");
-				     }     
-				     
-				     
-				     JSONTokener tokener = new JSONTokener(builder.toString());
-				     JSONObject finalResult = new JSONObject(tokener);
-				     
-				   
-				     Log.d("ImageResponse", finalResult.getString("local_x") + " " + finalResult.getString("local_y"));
-				     Log.d("ImageResponse", (Double.valueOf(finalResult.getDouble("overall_confidence")).toString()));
-				          
-				     
-				     in.close();
-				     out.close();
 				   } catch (JSONException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
@@ -396,10 +379,10 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 				     urlConnection.disconnect();
 				    }
 				  
-				Log.d("URL_CONNECTION","SUCCESS!");
+				Log.d("URL_CONNECTION","IMAGE SUCCESS!");
 			}
 			catch (MalformedURLException e){ }
-			catch (IOException e) {Log.d("URL_EXCEPTION","FAILURE!"+ e.getMessage()); }
+			catch (IOException e) {Log.d("URL_EXCEPTION","IMAGE FAILURE!"+ e.getMessage()); }
 			
 			return null;
         }
@@ -677,7 +660,7 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 	    	//getOutputMediaFile();
 	    
 	    	
-	        File pictureFile = getOutputMediaFile();
+	        pictureFile = getOutputMediaFile();
 	        if (pictureFile == null){
 	            Log.d("TAG3: ", "Error creating media file, check storage permissions!");
 	            return;
@@ -706,7 +689,7 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 		    ByteArrayOutputStream baos = new ByteArrayOutputStream();  
 		    bm.compress(Bitmap.CompressFormat.JPEG, 100 , baos);    
 		    image = baos.toByteArray(); 
-		    //encImage = Base64.encodeToString(b, Base64.DEFAULT);
+		    encImage = Base64.encodeToString(image, Base64.DEFAULT);
 		    
 		    //pictureFile.delete();
 	    }
