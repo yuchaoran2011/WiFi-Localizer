@@ -74,6 +74,9 @@ import android.widget.TextView;
 
 public class StaticLocalization extends Activity implements SensorEventListener {
 
+	
+	private static final String CENTRAL_STATIC_URL = "http://10.10.67.138:8000/central/static_fusion";
+	
 	static byte[] image;
 	
 	private long timestamp;
@@ -103,6 +106,8 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 	File pictureFile;
 	String encImage;
 	JSONObject JSONParams;
+	
+	JSONObject integratedRequest = new JSONObject();
 	
 	
 	private BroadcastReceiver receiver;
@@ -212,9 +217,8 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 							
 				new WifiQueryTask("http://django.kung-fu.org:8001/wifi/submit_fingerprint", query).execute(c);
 				new ImageQueryTask("http://ahvaz.eecs.berkeley.edu:80/").execute(c);
-				Log.d("ImageQuery", "Image query sent to server!");
 			}
-			}
+		}
 		}
 	,i);    				
 			
@@ -370,6 +374,15 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 						JSONObject JSONResponse = new JSONObject(response);
 						Log.d("ImageResponse", JSONResponse.toString());
 						
+						JSONObject imageResponse = new JSONObject();
+						imageResponse.put("location", JSONResponse.get("local_x") + " " + JSONResponse.get("local_y"));
+						imageResponse.put("confidence", JSONResponse.get("overall_confidence"));
+						integratedRequest.put("imageResponse", imageResponse);
+						
+						new CentralQueryTask(CENTRAL_STATIC_URL, integratedRequest).execute(c);
+						
+						Log.d("integratedRequest", integratedRequest.toString());
+						
 					   
 				   } catch (JSONException e) {
 						// TODO Auto-generated catch block
@@ -392,7 +405,6 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 	
 	
 	
-	@SuppressWarnings("unused")
 	private class CentralQueryTask extends AsyncTask<Context, Void, Void> 
     {
         private String url_str;
@@ -434,11 +446,31 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 				     out.flush();
 				     
 				     
+				     // Parse response sent from central server
 				     InputStream in = new BufferedInputStream(urlConnection.getInputStream());
+				     BufferedReader br = new BufferedReader(new InputStreamReader(in));
+				     
+				     
+				     StringBuilder builder = new StringBuilder();
+				     String line = null;
+				     for (; (line = br.readLine()) != null;) {
+				         builder.append(line).append("\n");
+				     }     
+				     
+				     
+				     JSONTokener tokener = new JSONTokener(builder.toString());
+				     JSONObject finalResult = new JSONObject(tokener);
+				     
+				     Log.d("central_x", (Double.valueOf(finalResult.getDouble("x")).toString()));
+				     Log.d("central_y", (Double.valueOf(finalResult.getDouble("y")).toString()));
+				     
 				     
 				     in.close();
 				     out.close();
-				   }
+				   } catch (JSONException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 				    finally {
 				     urlConnection.disconnect();
 				    }
@@ -519,6 +551,12 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 				     Log.d("confidence", (Double.valueOf(finalResult.getDouble("confidence")).toString()));
 				     
 				     
+				     JSONObject wifiResponse = new JSONObject();
+				     wifiResponse.put("location", finalResult.getString("location"));
+				     wifiResponse.put("confidence", Double.valueOf(finalResult.getDouble("confidence")));
+				     
+				     integratedRequest.put("wifiResponse", wifiResponse);
+				     
 				     
 				     in.close();
 				     out.close();
@@ -530,10 +568,10 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 				     urlConnection.disconnect();
 				    }
 				  
-				Log.d("URL_CONNECTION","SUCCESS!");
+				Log.d("URL_CONNECTION","WIFI SUCCESS!");
 			}
 			catch (MalformedURLException e){ }
-			catch (IOException e) {Log.d("URL_EXCEPTION","FAILURE!"+ e.getMessage()); }
+			catch (IOException e) {Log.d("URL_EXCEPTION","WIFI FAILURE!"+ e.getMessage()); }
 			
 			return null;
         }

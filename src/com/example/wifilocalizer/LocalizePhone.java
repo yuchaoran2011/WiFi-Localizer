@@ -59,8 +59,8 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	
 	static final String WIFI_URL = "http://django.kung-fu.org:8001/wifi/submit_fingerprint";
 	static final String IMAGE_URL = "http://ahvaz.eecs.berkeley.edu/";
-	static final String CENTRAL_DYNAMIC_URL = "http://10.10.65.224:8000/central/receive_hdg_and_dis";
-	static final String CENTRAL_STATIC_URL = "http://10.10.65.224:8000/central/static_fusion";
+	static final String CENTRAL_DYNAMIC_URL = "http://10.10.67.138:8000/central/receive_hdg_and_dis";
+	static final String CENTRAL_STATIC_URL = "http://10.10.67.138:8000/central/static_fusion";
 	
 
 	
