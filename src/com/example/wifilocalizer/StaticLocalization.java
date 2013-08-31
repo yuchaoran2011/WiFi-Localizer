@@ -75,7 +75,7 @@ import android.widget.TextView;
 public class StaticLocalization extends Activity implements SensorEventListener {
 
 	
-	private static final String CENTRAL_STATIC_URL = "http://10.10.67.138:8000/central/static_fusion";
+	private static final String CENTRAL_STATIC_URL = "http://10.10.66.121:8000/central/static_fusion";
 	
 	static byte[] image;
 	
@@ -89,13 +89,18 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 	private Camera camera;
 	private CameraPreview mPreview;
 	private SensorManager mSensorManager;
-	private Sensor linearAccelerometer, rotationSensor;
+	private Sensor linearAccelerometer, rotationSensor, geomagnetic, gravity;
 	
 	
 	private float[] linearAcceleration = new float[4];
 	private float[] globalDeltaRotationVector = {0, 0, 0, 0};
 	private float[] globalAcceleration = {0, 0, 0, 0};
+	private float[] geomagneticValues = new float[3];
+	private float[] gravityValues = new float[3];
 	
+	
+	private float[] Rmat = new float[9];
+	private float[] I = new float[9];
 	private float[] rotationMatrix = new float[16];
 	private float[] newRotationVector = new float[3], oldRotationVector = new float[3], deltaRotationVector = new float[4];
 	
@@ -141,6 +146,8 @@ public class StaticLocalization extends Activity implements SensorEventListener 
         
         linearAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
         rotationSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
+        geomagnetic = mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+        gravity = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         
 		
 		IntentFilter i = new IntentFilter();
@@ -191,7 +198,7 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 				try {
 				JSONParams.put("method", "client_query");
 				JSONParams.put("user", "chaoran");
-				JSONParams.put("database", "corydb");
+				JSONParams.put("database", "0809_db");
 				JSONParams.put("deadline_seconds", 60.0);
 				JSONObject JSONPose = new JSONObject();
 					JSONPose.put("latitude", 0);
@@ -216,7 +223,7 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 				
 							
 				new WifiQueryTask("http://django.kung-fu.org:8001/wifi/submit_fingerprint", query).execute(c);
-				new ImageQueryTask("http://ahvaz.eecs.berkeley.edu:80/").execute(c);
+				new ImageQueryTask("http://ahvaz.eecs.berkeley.edu:90/").execute(c);
 			}
 		}
 		}
@@ -283,6 +290,7 @@ public class StaticLocalization extends Activity implements SensorEventListener 
         
         mSensorManager.registerListener(this, linearAccelerometer, SensorManager.SENSOR_DELAY_NORMAL);
         mSensorManager.registerListener(this, rotationSensor, SensorManager.SENSOR_DELAY_NORMAL);
+        mSensorManager.registerListener(this, geomagnetic, SensorManager.SENSOR_DELAY_NORMAL);
         
         
         
@@ -301,7 +309,7 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 	            		timestamp = System.currentTimeMillis();
 	            		camera.takePicture(null, null, mPicture);
 	            		camera.startPreview();
-	            		handler.postDelayed(this, 10000);
+	            		handler.postDelayed(this, 4000);
 	                }
 	                
 	            }
@@ -378,6 +386,8 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 						imageResponse.put("location", JSONResponse.get("local_x") + " " + JSONResponse.get("local_y"));
 						imageResponse.put("confidence", JSONResponse.get("overall_confidence"));
 						integratedRequest.put("imageResponse", imageResponse);
+						
+						//Toast.makeText(c[0], (CharSequence)("Image Location" + JSONResponse.get("local_x") + " " + JSONResponse.get("local_y")), Toast.LENGTH_SHORT).show();
 						
 						new CentralQueryTask(CENTRAL_STATIC_URL, integratedRequest).execute(c);
 						
@@ -791,7 +801,22 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 			linearAcceleration[3] = 0;
 		}	
 	   
+		if (type == Sensor.TYPE_ACCELEROMETER) {
+			gravityValues = event.values;
+		}
 		
+		if (type == Sensor.TYPE_MAGNETIC_FIELD) {
+			geomagneticValues = event.values;
+			
+			SensorManager.getRotationMatrix(Rmat, I, gravityValues, geomagneticValues);
+			SensorManager.getOrientation(Rmat, orientation);
+			
+			cameraPose[2] = (float) Math.round(Math.toDegrees(orientation[2])*100)/100; // Row
+			cameraPose[1] = (float) Math.round(Math.toDegrees(orientation[1])*100)/100; // Pitch
+			cameraPose[0] = (float) Math.round(Math.toDegrees(orientation[0])*100)/100; // Yaw
+		}
+			
+			
 	   else if (type == Sensor.TYPE_ROTATION_VECTOR) {
 		   long currTimestamp = System.currentTimeMillis(); 
 		   orientation = new float[3];
@@ -807,7 +832,7 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 		   SensorManager.getRotationMatrixFromVector(rotationMatrix, newRotationVector);
 		   
 		   
-		   
+		   /*
 		   if (currTimestamp >= timestamp) {
 			   SensorManager.getOrientation(rotationMatrix, orientation);
 			   cameraPose[2] = (float) Math.round(Math.toDegrees(orientation[2])*100)/100; // Row
@@ -815,7 +840,7 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 			   cameraPose[0] = (float) Math.round(Math.toDegrees(orientation[0])*100)/100; // Yaw
 			   //Log.d("ORIENTATION", cameraPose[0]+" "+cameraPose[1]+" "+cameraPose[2]);
 			   Log.d("YAW", cameraPose[2] + "");
-		   }
+		   }*/
 		   
 		   
 		   
