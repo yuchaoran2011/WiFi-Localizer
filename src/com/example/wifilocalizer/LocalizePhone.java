@@ -248,8 +248,8 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				imageQuery = new JSONObject(imageQueryMap);
 				
 							
-				new WifiQueryTask(WIFI_URL, query).execute(c);
-				Log.d("REQUEST", "WiFi Request sent!");
+				//new WifiQueryTask(WIFI_URL, query).execute(c);
+				//Log.d("REQUEST", "WiFi Request sent!");
 				
 				//new ImageQueryTask(IMAGE_URL, imageQuery).execute(c);
 		
