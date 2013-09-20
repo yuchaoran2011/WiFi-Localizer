@@ -72,8 +72,8 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	
 	private static final String WIFI_URL = "http://django.kung-fu.org:8001/wifi/submit_fingerprint";
 	private static final String IMAGE_URL = "http://ahvaz.eecs.berkeley.edu/";
-	private static final String CENTRAL_DYNAMIC_URL = "http://10.10.67.248:8000/central/receive_hdg_and_dis";
-	private static final String CENTRAL_STATIC_URL = "http://10.10.67.248:8000/central/static_fusion";
+	private static final String CENTRAL_DYNAMIC_URL = "http://10.10.66.124:8000/central/receive_hdg_and_dis";
+	private static final String CENTRAL_STATIC_URL = "http://10.10.66.124:8000/central/static_fusion";
 	
 
 	
@@ -179,6 +179,8 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 		
 		@Override
 		public void onReceive(Context c, Intent i){
+			
+			Log.d("Timing", "Time2: Scanning finished!");
 
 			JSONObject query, queryCore;
 			JSONObject pose, returnParams;
@@ -208,7 +210,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				}
 				
 				//macRSSI.put("cluster_id", 1);
-				
+				macRSSI.put("cutoff_dB", -65);
 				
 				
 				queryCore = new JSONObject(macRSSI);
@@ -247,9 +249,10 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				
 				imageQuery = new JSONObject(imageQueryMap);
 				
-							
-				//new WifiQueryTask(WIFI_URL, query).execute(c);
-				//Log.d("REQUEST", "WiFi Request sent!");
+						
+				Log.d("Timing", "Time3: RSSI vector sent to WiFi server!");
+				new WifiQueryTask(WIFI_URL, query).execute(c);
+				Log.d("REQUEST", "WiFi Request sent!");
 				
 				//new ImageQueryTask(IMAGE_URL, imageQuery).execute(c);
 		
@@ -339,18 +342,19 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	            	if(!mAppStopped) {
 	            		
 	            		camera.startPreview();
+	            		Log.d("Timing", "Time1: Scanning started!");
 	            		scan();
 	            		timestamp = System.currentTimeMillis();
-	            		camera.takePicture(null, null, mPicture);
-	            		camera.startPreview();
+	            		//camera.takePicture(null, null, mPicture);
+	            		//camera.startPreview();
 	            		
-	            		handler.postDelayed(this, 5000);
+	            		handler.postDelayed(this, 5500);
 	                }
 	                
 	            }
 	        };
 
-			handler.postDelayed(r, 10);
+			handler.postDelayed(r, 20);
 	        
 			
 			
@@ -382,6 +386,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	
 	
 	
+	@SuppressWarnings("unused")
 	private class ImageQueryTask extends AsyncTask<Context, Void, Void> 
     {
         private String url_str;
@@ -395,8 +400,6 @@ public class LocalizePhone extends Activity implements SensorEventListener {
         
         
         protected Void doInBackground(Context... c) {
-        	
-        	Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
         	
 			byte[] data = json.toString().getBytes();
 		
@@ -492,19 +495,16 @@ public class LocalizePhone extends Activity implements SensorEventListener {
         
         protected Void doInBackground(Context... c) {
         	
-        	Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
-        	
 			byte[] data = json.toString().getBytes();
 		
 			try {
 				
 				URL url = new URL(url_str);
 		
-				
 				HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
 				   try {
-					 urlConnection.setReadTimeout( 10000 /*milliseconds*/ );
-					 urlConnection.setConnectTimeout( 15000 /* milliseconds */ );
+					 urlConnection.setReadTimeout( 100000 /*milliseconds*/ );
+					 urlConnection.setConnectTimeout( 300000 /* milliseconds */ ); //35000
 					   
 					 urlConnection.setDoInput(true);
 				     urlConnection.setDoOutput(true);
@@ -522,7 +522,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				     out.flush();
 				     
 				     
-				     // Parse response sent from WiFi localization server
+				     // Parse response sent from central server
 				     InputStream in = new BufferedInputStream(urlConnection.getInputStream());
 				     BufferedReader br = new BufferedReader(new InputStreamReader(in));
 				     
@@ -537,9 +537,12 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				     JSONTokener tokener = new JSONTokener(builder.toString());
 				     JSONObject finalResult = new JSONObject(tokener);
 				     
+				     Log.d("Timing", "Time6: Estimated location from central server obtained!");
+				     
 				     Log.d("central_x", (Double.valueOf(finalResult.getDouble("x")).toString()));
 				     Log.d("central_y", (Double.valueOf(finalResult.getDouble("y")).toString()));
 				     		     
+				     //Toast.makeText(this.getApplicationContext(), "Received scan results.", Toast.LENGTH_SHORT).show();
 				     
 				     in.close();
 				     out.close();
@@ -579,8 +582,6 @@ public class LocalizePhone extends Activity implements SensorEventListener {
         
         protected Void doInBackground(Context... c) {
         	
-        	Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
-        	
 			byte[] data = json.toString().getBytes();
 		
 			try {
@@ -590,12 +591,13 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				
 				HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
 				   try {
-					 urlConnection.setReadTimeout( 10000 /*milliseconds*/ );
-					 urlConnection.setConnectTimeout( 15000 /* milliseconds */ );
+					 urlConnection.setReadTimeout( 30000 /*milliseconds*/ );
+					 urlConnection.setConnectTimeout( 30000 /* milliseconds */ );
 					   
 					 urlConnection.setDoInput(true);
 				     urlConnection.setDoOutput(true);
 				     urlConnection.setFixedLengthStreamingMode(data.length);
+				     //urlConnection.setRequestProperty("Content-Length", "" + json.length());
 				     
 				     urlConnection.setRequestProperty("content-type","application/json; charset=utf-8");
 				     urlConnection.setRequestProperty("Accept", "application/json");
@@ -608,17 +610,17 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				     Log.d("DATA", json.toString());
 				     out.flush();
 				     
+
 				     
-				     // Parse response sent from WiFi localization server
 				     InputStream in = new BufferedInputStream(urlConnection.getInputStream());
 				     BufferedReader br = new BufferedReader(new InputStreamReader(in));
-				     
 				     
 				     StringBuilder builder = new StringBuilder();
 				     String line = null;
 				     for (; (line = br.readLine()) != null;) {
 				         builder.append(line).append("\n");
-				     }     
+				     }  
+				     Log.d("Timing", "Time4: Received location from WiFi server!");
 				     
 				     
 				     JSONTokener tokener = new JSONTokener(builder.toString());
@@ -630,14 +632,14 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				     wifiResponseMap.put("location", finalResult.getString("location"));
 				     wifiResponseMap.put("confidence", (Double.valueOf(finalResult.getDouble("confidence")).toString()));
 				     wifiResponse = new JSONObject(wifiResponseMap);
-				 
 				     
 				     HashMap<String, JSONObject> overallMap = new HashMap<String, JSONObject>();
 				     overallMap.put("imageResponse", imageResponse);
 				     overallMap.put("wifiResponse", wifiResponse);
-				     
 				     overallResponse = new JSONObject(overallMap);  
 				     
+				     
+				     Log.d("Timing", "Time5: WiFi location sent to central server for processing!");
 				     new CentralQueryTask(CENTRAL_DYNAMIC_URL, overallResponse).execute(c);
 				     
 				     Log.d("REQUEST", "Integrated WiFi+Image sent to central server!");
@@ -652,6 +654,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 					e.printStackTrace();
 				}
 				    finally {
+				     //urlConnection.setRequestProperty("Connection", "close");
 				     urlConnection.disconnect();
 				    }
 				  
@@ -858,7 +861,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 		
 		if (stepDetected) {
 			if (signalPowerOutOfRange) {
-				Log.d("Invalid Step", "Power out of range!");
+				//Log.d("Invalid Step", "Power out of range!");
 				return -10.0;
 			} else {
 				Log.d("Valid Step", "Valid step!");
@@ -873,7 +876,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				
 				new CentralQueryTask(CENTRAL_DYNAMIC_URL, motion).execute(this.getApplicationContext());
 				
-				Log.d("REQUEST", "Valid step sent to central server!");
+				//Log.d("REQUEST", "Valid step sent to central server!");
 				return detector.stepLength;
 			}
 		}
@@ -940,7 +943,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 			   cameraPose[1] = (float) Math.round(Math.toDegrees(orientation[1])*100)/100; // Pitch
 			   cameraPose[2] = (float) Math.round(Math.toDegrees(orientation[0])*100)/100; // Yaw
 			   //Log.d("ORIENTATION", cameraPose[0]+" "+cameraPose[1]+" "+cameraPose[2]);
-			   Log.d("YAW", cameraPose[2] + "");
+			   //Log.d("YAW", cameraPose[2] + "");
 		   }
 		   
 		   
