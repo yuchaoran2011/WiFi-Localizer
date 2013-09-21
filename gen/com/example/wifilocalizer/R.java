@@ -49,7 +49,6 @@ public final class R {
     }
     public static final class id {
         public static final int action_settings=0x7f0a0004;
-        public static final int camera_preview=0x7f0a0000;
         public static final int camera_preview_static=0x7f0a0002;
         public static final int clear_database=0x7f0a0010;
         public static final int help=0x7f0a000d;
@@ -57,6 +56,7 @@ public final class R {
         public static final int imageView1=0x7f0a0001;
         public static final int localization=0x7f0a000f;
         public static final int log_attempt=0x7f0a0008;
+        public static final int map=0x7f0a0000;
         public static final int measurement=0x7f0a000e;
         public static final int pause=0x7f0a000c;
         public static final int pick_next=0x7f0a0009;

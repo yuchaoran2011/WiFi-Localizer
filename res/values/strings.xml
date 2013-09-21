@@ -12,7 +12,7 @@
     <string name="map_alt">Floor plan of the building</string>
     <string name="title_activity_display_message">Greetings</string>
     <string name="hello_world">Hello! Wi-Fi scanning is in progress!</string>
-    <string name="title_activity_localize_phone">Wi-Fi Scanning Results</string>
+    <string name="title_activity_localize_phone">Indoor Location Tracking</string>
     <string name="title_activity_mark_on_map">MarkOnMap</string>
     <string name="title_activity_rotation_vector_demo">Rotation Vector Demo</string>
     <string name="title_activity_static_localization">Static Localization</string>

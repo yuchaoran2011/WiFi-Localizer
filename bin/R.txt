@@ -16,7 +16,6 @@ int drawable icon 0x7f020002
 int drawable image 0x7f020003
 int drawable sample 0x7f020004
 int id action_settings 0x7f0a0004
-int id camera_preview 0x7f0a0000
 int id camera_preview_static 0x7f0a0002
 int id clear_database 0x7f0a0010
 int id help 0x7f0a000d
@@ -24,6 +23,7 @@ int id image 0x7f0a0003
 int id imageView1 0x7f0a0001
 int id localization 0x7f0a000f
 int id log_attempt 0x7f0a0008
+int id map 0x7f0a0000
 int id measurement 0x7f0a000e
 int id pause 0x7f0a000c
 int id pick_next 0x7f0a0009

@@ -9,10 +9,9 @@
     tools:context=".LocalizePhone" >
 
     <FrameLayout
-    android:id="@+id/camera_preview"
+    android:id="@+id/map"
     android:layout_width="fill_parent"
-    android:layout_height="fill_parent"
-    android:layout_weight="1" />
+    android:layout_height="fill_parent" />
 
     <TextView
         android:layout_width="wrap_content"

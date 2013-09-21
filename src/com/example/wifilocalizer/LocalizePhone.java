@@ -10,6 +10,7 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -25,7 +26,10 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.pm.PackageManager;
+import android.content.res.AssetManager;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
 import android.hardware.Camera;
 import android.hardware.Camera.PictureCallback;
 import android.hardware.Sensor;
@@ -38,14 +42,13 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.StrictMode;
 import android.support.v4.app.NavUtils;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
-import android.widget.FrameLayout;
+import android.view.View;
 import android.widget.TextView;
 import cz.muni.fi.sandbox.dsp.filters.ContinuousConvolution;
 import cz.muni.fi.sandbox.dsp.filters.FrequencyCounter;
@@ -69,23 +72,19 @@ class ScanComparable implements Comparator<ScanResult> {
 
 public class LocalizePhone extends Activity implements SensorEventListener {
 	
-	
 	private static final String WIFI_URL = "http://django.kung-fu.org:8001/wifi/submit_fingerprint";
 	private static final String IMAGE_URL = "http://ahvaz.eecs.berkeley.edu/";
-	private static final String CENTRAL_DYNAMIC_URL = "http://10.10.66.124:8000/central/receive_hdg_and_dis";
-	private static final String CENTRAL_STATIC_URL = "http://10.10.66.124:8000/central/static_fusion";
+	private static final String CENTRAL_DYNAMIC_URL = "http://10.10.65.195:8000/central/receive_hdg_and_dis";
 	
-
 	
 	private long timestamp;
 	
-	
 	TextView textView;
-	
+	MapView mapView;
 	
 	private WifiManager wifi;
 	private Camera camera;
-	private CameraPreview mPreview;
+	//private CameraPreview mPreview;
 	private SensorManager mSensorManager;
 	private Sensor linearAccelerometer, rotationSensor, accelerometer;
 	
@@ -93,18 +92,17 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	private float[] linearAcceleration = new float[4];
 	private float[] globalDeltaRotationVector = {0, 0, 0, 0};
 	private float[] globalAcceleration = {0, 0, 0, 0};
-	
 	private float[] rotationMatrix = new float[16];
 	private float[] newRotationVector = new float[3], oldRotationVector = new float[3], deltaRotationVector = new float[4];
 	
 	private float[] cameraPose = new float[3], orientation = new float[3];
 	
-	private boolean DEVELOPER_MODE = false, mAppStopped;
+	private boolean mAppStopped;
 	
 	private BroadcastReceiver receiver;
 
-
-
+	private double[] currentLocation = {23.0*13.0, 45.0*13.0};
+	private boolean updated = true;
 
 	private MovingAverageStepDetector mStepDetector;
 	private ContinuousConvolution mCC;
@@ -126,31 +124,73 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	JSONObject wifiResponse, imageResponse, overallResponse;
 	static byte[] image;
 	
+	
+	
+	
+	private class MapView extends View {	
+		private ArrayList<String> walls = new ArrayList<String>();
+		private Paint wallPaint = new Paint();
+		private Paint circlePaint = new Paint();
+		private boolean firstTimeCalled = true;
+		
+		public MapView(Context context) {
+			super(context);
+			
+			wallPaint.setColor(Color.BLACK);
+			wallPaint.setFlags(Paint.ANTI_ALIAS_FLAG);
+			circlePaint.setColor(Color.RED);
+			circlePaint.setFlags(Paint.ANTI_ALIAS_FLAG);
+			
+			// Load floor map from Assets folder
+			AssetManager assetManager = getAssets();
+			InputStream input;
+	        try {
+	        	input = assetManager.open("aligned.edge");   
+	        	BufferedReader reader = new BufferedReader(new InputStreamReader(input));
+	        	String line= reader.readLine();
+	        	while (line != null) {
+	        		walls.add(line);
+	        		line = reader.readLine();
+	        	}
+	             
+	        } catch (IOException e) {
+	            // TODO Auto-generated catch block
+	            e.printStackTrace();
+	        }
+		}
+	
+
+		protected void onDraw(Canvas canvas) {
+			if (firstTimeCalled) {
+				for (String line: walls) {
+					String[] splited = line.split("\\s+");
+	        		float x1 = (Float.parseFloat(splited[0])+23)*13f;
+	        		float y1 = -(Float.parseFloat(splited[1])-45)*13f;
+	        		float x2 = (Float.parseFloat(splited[2])+23)*13f;
+	        		float y2 = -(Float.parseFloat(splited[3])-45)*13f;
+					canvas.drawLine(x1, y1, x2, y2, wallPaint);
+				}
+				firstTimeCalled = false;
+			}
+			Log.d("updated", updated + " " + currentLocation[0] + " " + currentLocation[1]);
+			if (updated) {
+				canvas.drawCircle((float)currentLocation[0], (float)currentLocation[1], 8f, circlePaint);
+				updated = false;
+			}
+		}
+	}
+	
 
 
 	
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
-		if (DEVELOPER_MODE) {
-	         StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder()
-	                 .detectDiskReads()
-	                 .detectDiskWrites()
-	                 .detectNetwork()   // or .detectAll() for all detectable problems
-	                 .penaltyLog()
-	                 .build());
-	         StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder()
-	                 .detectLeakedSqlLiteObjects()
-	                 .detectLeakedClosableObjects()
-	                 .penaltyLog()
-	                 .penaltyDeath()
-	                 .build());
-	     }
-		
 		
 		super.onCreate(savedInstanceState);
-		setContentView(R.layout.activity_localize_phone);
-
+		
+		mapView = new MapView(this);
+		setContentView(mapView);
 		
         
         mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
@@ -250,9 +290,9 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				imageQuery = new JSONObject(imageQueryMap);
 				
 						
-				Log.d("Timing", "Time3: RSSI vector sent to WiFi server!");
-				new WifiQueryTask(WIFI_URL, query).execute(c);
-				Log.d("REQUEST", "WiFi Request sent!");
+				//Log.d("Timing", "Time3: RSSI vector sent to WiFi server!");
+				//new WifiQueryTask(WIFI_URL, query).execute(c);
+				//Log.d("REQUEST", "WiFi Request sent!");
 				
 				//new ImageQueryTask(IMAGE_URL, imageQuery).execute(c);
 		
@@ -313,11 +353,12 @@ public class LocalizePhone extends Activity implements SensorEventListener {
         super.onResume();
         
         camera = getCameraInstance();
-		mPreview = new CameraPreview(this, camera);
-        FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
-        preview.addView(mPreview);
+		//mPreview = new CameraPreview(this, camera);
+        //FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
+        //preview.addView(mPreview);
+        //preview.setKeepScreenOn(true);
         
-        preview.setKeepScreenOn(true);
+        mapView.setKeepScreenOn(true);
         
         
         mAppStopped = false; 
@@ -341,7 +382,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	            {
 	            	if(!mAppStopped) {
 	            		
-	            		camera.startPreview();
+	            		//camera.startPreview();
 	            		Log.d("Timing", "Time1: Scanning started!");
 	            		scan();
 	            		timestamp = System.currentTimeMillis();
@@ -503,8 +544,8 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 		
 				HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
 				   try {
-					 urlConnection.setReadTimeout( 100000 /*milliseconds*/ );
-					 urlConnection.setConnectTimeout( 300000 /* milliseconds */ ); //35000
+					 urlConnection.setReadTimeout( 10000 /*milliseconds*/ );
+					 urlConnection.setConnectTimeout( 35000 /* milliseconds */ ); //35000
 					   
 					 urlConnection.setDoInput(true);
 				     urlConnection.setDoOutput(true);
@@ -539,8 +580,12 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				     
 				     Log.d("Timing", "Time6: Estimated location from central server obtained!");
 				     
-				     Log.d("central_x", (Double.valueOf(finalResult.getDouble("x")).toString()));
-				     Log.d("central_y", (Double.valueOf(finalResult.getDouble("y")).toString()));
+				     //Log.d("central_x", (Double.valueOf(finalResult.getDouble("x")).toString()));
+				     //Log.d("central_y", (Double.valueOf(finalResult.getDouble("y")).toString()));
+				     
+				     currentLocation[0] = (Double.valueOf(finalResult.getDouble("x")) + 23.0) * 13.0;
+				     currentLocation[1] = (Double.valueOf(finalResult.getDouble("y")) - 45.0) * 13.0;
+				     updated = true;
 				     		     
 				     //Toast.makeText(this.getApplicationContext(), "Received scan results.", Toast.LENGTH_SHORT).show();
 				     
@@ -556,7 +601,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				  
 				Log.d("URL_CONNECTION","SUCCESS!");
 			}
-			catch (MalformedURLException e){ }
+			catch (MalformedURLException e) {Log.d("MalformedURLException", e.getMessage()); }
 			catch (IOException e) {Log.d("URL_EXCEPTION","FAILURE!"+ e.getMessage()); }
 			
 			return null;
@@ -673,7 +718,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	
 	protected void onPause() {
 		mAppStopped = true;
-		camera.stopPreview();
+		//camera.stopPreview();
 		camera.release();
 		
 		super.onPause();	
@@ -693,20 +738,6 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	
 	
 	/*******    Camera Code     ********/
-	
-	/* Check if this device has a camera */
-	@SuppressWarnings("unused")
-	private boolean checkCameraHardware(Context context) {
-	    if (context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA)){
-	        // this device has a camera
-	        return true;
-	    } else {
-	        // no camera on this device
-	        return false;
-	    }
-	}
-	
-	
 	
 	/** A safe way to get an instance of the Camera object. */
 	public static Camera getCameraInstance(){
