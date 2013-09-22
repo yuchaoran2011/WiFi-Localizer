@@ -27,6 +27,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.res.AssetManager;
+import android.graphics.Bitmap;
+import android.graphics.Bitmap.Config;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -74,7 +76,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	
 	private static final String WIFI_URL = "http://django.kung-fu.org:8001/wifi/submit_fingerprint";
 	private static final String IMAGE_URL = "http://ahvaz.eecs.berkeley.edu/";
-	private static final String CENTRAL_DYNAMIC_URL = "http://10.10.65.195:8000/central/receive_hdg_and_dis";
+	private static final String CENTRAL_DYNAMIC_URL = "http://192.168.1.141:8000/central/receive_hdg_and_dis";
 	
 	
 	private long timestamp;
@@ -161,7 +163,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	
 
 		protected void onDraw(Canvas canvas) {
-			if (firstTimeCalled) {
+			//if (firstTimeCalled) {
 				for (String line: walls) {
 					String[] splited = line.split("\\s+");
 	        		float x1 = (Float.parseFloat(splited[0])+23)*13f;
@@ -171,12 +173,13 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 					canvas.drawLine(x1, y1, x2, y2, wallPaint);
 				}
 				firstTimeCalled = false;
-			}
+			//}
 			Log.d("updated", updated + " " + currentLocation[0] + " " + currentLocation[1]);
-			if (updated) {
+			//if (updated) {
+				Log.d("DRAW", "onDraw gets called!");
 				canvas.drawCircle((float)currentLocation[0], (float)currentLocation[1], 8f, circlePaint);
-				updated = false;
-			}
+				//updated = false;
+			//}
 		}
 	}
 	
@@ -366,9 +369,6 @@ public class LocalizePhone extends Activity implements SensorEventListener {
         mSensorManager.registerListener(this, linearAccelerometer, SensorManager.SENSOR_DELAY_NORMAL);
         mSensorManager.registerListener(this, rotationSensor, SensorManager.SENSOR_DELAY_NORMAL);
         mSensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_FASTEST);
-        
-        
-        
         
         
         wifi = (WifiManager)getSystemService(Context.WIFI_SERVICE);
@@ -584,8 +584,10 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				     //Log.d("central_y", (Double.valueOf(finalResult.getDouble("y")).toString()));
 				     
 				     currentLocation[0] = (Double.valueOf(finalResult.getDouble("x")) + 23.0) * 13.0;
-				     currentLocation[1] = (Double.valueOf(finalResult.getDouble("y")) - 45.0) * 13.0;
-				     updated = true;
+				     currentLocation[1] = -(Double.valueOf(finalResult.getDouble("y")) - 45.0) * 13.0;
+				     //updated = true;
+				     mapView.postInvalidate();
+
 				     		     
 				     //Toast.makeText(this.getApplicationContext(), "Received scan results.", Toast.LENGTH_SHORT).show();
 				     
