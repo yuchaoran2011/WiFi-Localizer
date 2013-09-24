@@ -27,8 +27,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.res.AssetManager;
-import android.graphics.Bitmap;
-import android.graphics.Bitmap.Config;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -75,8 +73,9 @@ class ScanComparable implements Comparator<ScanResult> {
 public class LocalizePhone extends Activity implements SensorEventListener {
 	
 	private static final String WIFI_URL = "http://django.kung-fu.org:8001/wifi/submit_fingerprint";
+	@SuppressWarnings("unused")
 	private static final String IMAGE_URL = "http://ahvaz.eecs.berkeley.edu/";
-	private static final String CENTRAL_DYNAMIC_URL = "http://192.168.1.141:8000/central/receive_hdg_and_dis";
+	private static final String CENTRAL_DYNAMIC_URL = "http://10.10.66.249:8000/central/receive_hdg_and_dis";
 	
 	
 	private long timestamp;
@@ -103,7 +102,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	
 	private BroadcastReceiver receiver;
 
-	private double[] currentLocation = {23.0*13.0, 45.0*13.0};
+	private double[] currentLocation = {25.0*13.0, 44.6*13.0};
 	private boolean updated = true;
 
 	private MovingAverageStepDetector mStepDetector;
@@ -133,7 +132,6 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 		private ArrayList<String> walls = new ArrayList<String>();
 		private Paint wallPaint = new Paint();
 		private Paint circlePaint = new Paint();
-		private boolean firstTimeCalled = true;
 		
 		public MapView(Context context) {
 			super(context);
@@ -147,7 +145,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 			AssetManager assetManager = getAssets();
 			InputStream input;
 	        try {
-	        	input = assetManager.open("aligned.edge");   
+	        	input = assetManager.open("cory2p.edge");   
 	        	BufferedReader reader = new BufferedReader(new InputStreamReader(input));
 	        	String line= reader.readLine();
 	        	while (line != null) {
@@ -172,7 +170,6 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	        		float y2 = -(Float.parseFloat(splited[3])-45)*13f;
 					canvas.drawLine(x1, y1, x2, y2, wallPaint);
 				}
-				firstTimeCalled = false;
 			//}
 			Log.d("updated", updated + " " + currentLocation[0] + " " + currentLocation[1]);
 			//if (updated) {
@@ -227,6 +224,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 
 			JSONObject query, queryCore;
 			JSONObject pose, returnParams;
+			@SuppressWarnings("unused")
 			JSONObject imageQuery;
 			
 			HashMap<String,Integer> macRSSI = new HashMap<String,Integer>();
@@ -293,9 +291,9 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				imageQuery = new JSONObject(imageQueryMap);
 				
 						
-				//Log.d("Timing", "Time3: RSSI vector sent to WiFi server!");
-				//new WifiQueryTask(WIFI_URL, query).execute(c);
-				//Log.d("REQUEST", "WiFi Request sent!");
+				Log.d("Timing", "Time3: RSSI vector sent to WiFi server!");
+				new WifiQueryTask(WIFI_URL, query).execute(c);
+				Log.d("REQUEST", "WiFi Request sent!");
 				
 				//new ImageQueryTask(IMAGE_URL, imageQuery).execute(c);
 		
@@ -818,6 +816,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	
 	
 	
+	@SuppressWarnings("unused")
 	private PictureCallback mPicture = new PictureCallback() {
 
 	    @Override
