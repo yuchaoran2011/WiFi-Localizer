@@ -48,24 +48,25 @@ public final class R {
         public static final int sample=0x7f020004;
     }
     public static final class id {
-        public static final int action_settings=0x7f0a0004;
-        public static final int camera_preview_static=0x7f0a0002;
-        public static final int clear_database=0x7f0a0010;
-        public static final int help=0x7f0a000d;
-        public static final int image=0x7f0a0003;
-        public static final int imageView1=0x7f0a0001;
-        public static final int localization=0x7f0a000f;
-        public static final int log_attempt=0x7f0a0008;
+        public static final int action_settings=0x7f0a0005;
+        public static final int camera_preview=0x7f0a0001;
+        public static final int camera_preview_static=0x7f0a0003;
+        public static final int clear_database=0x7f0a0011;
+        public static final int help=0x7f0a000e;
+        public static final int image=0x7f0a0004;
+        public static final int imageView1=0x7f0a0002;
+        public static final int localization=0x7f0a0010;
+        public static final int log_attempt=0x7f0a0009;
         public static final int map=0x7f0a0000;
-        public static final int measurement=0x7f0a000e;
-        public static final int pause=0x7f0a000c;
-        public static final int pick_next=0x7f0a0009;
-        public static final int reset_compass=0x7f0a0007;
-        public static final int select_bssid=0x7f0a0011;
-        public static final int select_floor=0x7f0a0005;
-        public static final int set_destination=0x7f0a000a;
-        public static final int set_position=0x7f0a0006;
-        public static final int settings=0x7f0a000b;
+        public static final int measurement=0x7f0a000f;
+        public static final int pause=0x7f0a000d;
+        public static final int pick_next=0x7f0a000a;
+        public static final int reset_compass=0x7f0a0008;
+        public static final int select_bssid=0x7f0a0012;
+        public static final int select_floor=0x7f0a0006;
+        public static final int set_destination=0x7f0a000b;
+        public static final int set_position=0x7f0a0007;
+        public static final int settings=0x7f0a000c;
     }
     public static final class layout {
         public static final int activity_display_message=0x7f030000;

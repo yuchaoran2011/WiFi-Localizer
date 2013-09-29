@@ -58,7 +58,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
-import android.os.StrictMode;
 import android.support.v4.app.NavUtils;
 import android.util.Base64;
 import android.util.Log;
@@ -79,6 +78,7 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 	
 	static byte[] image;
 	
+	@SuppressWarnings("unused")
 	private long timestamp;
 	
 	
@@ -89,6 +89,7 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 	private Camera camera;
 	private CameraPreview mPreview;
 	private SensorManager mSensorManager;
+	@SuppressWarnings("unused")
 	private Sensor linearAccelerometer, rotationSensor, geomagnetic, gravity;
 	
 	
@@ -106,7 +107,7 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 	
 	private float[] cameraPose = new float[3], orientation = new float[3];
 	
-	private boolean DEVELOPER_MODE = false, mAppStopped;
+	private boolean mAppStopped;
 	
 	File pictureFile;
 	String encImage;
@@ -120,28 +121,11 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 	
 
 	@Override
-	protected void onCreate(Bundle savedInstanceState) {
-		if (DEVELOPER_MODE) {
-	         StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder()
-	                 .detectDiskReads()
-	                 .detectDiskWrites()
-	                 .detectNetwork()   // or .detectAll() for all detectable problems
-	                 .penaltyLog()
-	                 .build());
-	         StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder()
-	                 .detectLeakedSqlLiteObjects()
-	                 .detectLeakedClosableObjects()
-	                 .penaltyLog()
-	                 .penaltyDeath()
-	                 .build());
-	     }
-		
+	protected void onCreate(Bundle savedInstanceState) {	
 		
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_static_localization);
-        
-        
-        
+    
         mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         
         linearAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
@@ -198,7 +182,7 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 				try {
 				JSONParams.put("method", "client_query");
 				JSONParams.put("user", "chaoran");
-				JSONParams.put("database", "0809_db");
+				JSONParams.put("database", "0815_db");
 				JSONParams.put("deadline_seconds", 60.0);
 				JSONObject JSONPose = new JSONObject();
 					JSONPose.put("latitude", 0);
@@ -219,11 +203,10 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 				catch (JSONException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
-				}
-				
+				}		
 							
 				new WifiQueryTask("http://django.kung-fu.org:8001/wifi/submit_fingerprint", query).execute(c);
-				new ImageQueryTask("http://ahvaz.eecs.berkeley.edu:90/").execute(c);
+				new ImageQueryTask("http://ahvaz.eecs.berkeley.edu:8001/").execute(c);
 			}
 		}
 		}
@@ -233,8 +216,6 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 		setupActionBar();
 	}
 
-	
-	
 	
 	
 	/**
@@ -358,12 +339,8 @@ public class StaticLocalization extends Activity implements SensorEventListener 
         
         
         protected Void doInBackground(Context... c) {
-		
 			try {
-				
 				URL url = new URL(url_str);
-		
-				
 				HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
 				   try {
 					   DefaultHttpClient client = new DefaultHttpClient();
@@ -374,8 +351,9 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 						entity.addPart("params", new StringBody(JSONParams.toString()));
 						entity.addPart("data", new FileBody(pictureFile));
 						
-						httppost.setEntity(entity);
+						Log.d("DATA", new FileBody(pictureFile).toString());
 						
+						httppost.setEntity(entity);		
 						
 						ResponseHandler<String> res = new BasicResponseHandler();
 						String response = client.execute(httppost, res);
@@ -499,13 +477,11 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 
 	
 	
-	private class WifiQueryTask extends AsyncTask<Context, Void, Void> 
-    {
+	private class WifiQueryTask extends AsyncTask<Context, Void, Void> {
         private String url_str;
         private JSONObject json;
 
-        public WifiQueryTask(String url, JSONObject json)
-        {
+        public WifiQueryTask(String url, JSONObject json) {
             this.url_str = url;
             this.json = json;
         }
@@ -513,12 +489,9 @@ public class StaticLocalization extends Activity implements SensorEventListener 
         
         protected Void doInBackground(Context... c) {
 			byte[] data = json.toString().getBytes();
-		
-			try {
-				
+			try {			
 				URL url = new URL(url_str);
-		
-				
+	
 				HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
 				   try {
 					 urlConnection.setReadTimeout( 10000 /*milliseconds*/ );
@@ -602,10 +575,6 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 		mSensorManager.unregisterListener(this, rotationSensor);
 		unregisterReceiver(receiver);
 	}
-	
-	
-	
-	
 	
 	
 	

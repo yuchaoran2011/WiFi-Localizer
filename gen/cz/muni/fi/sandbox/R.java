@@ -23,19 +23,19 @@ public final class R {
 		public static final int icon = 0x7f020002;
 	}
 	public static final class id {
-		public static final int clear_database = 0x7f0a0010;
-		public static final int help = 0x7f0a000d;
-		public static final int localization = 0x7f0a000f;
-		public static final int log_attempt = 0x7f0a0008;
-		public static final int measurement = 0x7f0a000e;
-		public static final int pause = 0x7f0a000c;
-		public static final int pick_next = 0x7f0a0009;
-		public static final int reset_compass = 0x7f0a0007;
-		public static final int select_bssid = 0x7f0a0011;
-		public static final int select_floor = 0x7f0a0005;
-		public static final int set_destination = 0x7f0a000a;
-		public static final int set_position = 0x7f0a0006;
-		public static final int settings = 0x7f0a000b;
+		public static final int clear_database = 0x7f0a0011;
+		public static final int help = 0x7f0a000e;
+		public static final int localization = 0x7f0a0010;
+		public static final int log_attempt = 0x7f0a0009;
+		public static final int measurement = 0x7f0a000f;
+		public static final int pause = 0x7f0a000d;
+		public static final int pick_next = 0x7f0a000a;
+		public static final int reset_compass = 0x7f0a0008;
+		public static final int select_bssid = 0x7f0a0012;
+		public static final int select_floor = 0x7f0a0006;
+		public static final int set_destination = 0x7f0a000b;
+		public static final int set_position = 0x7f0a0007;
+		public static final int settings = 0x7f0a000c;
 	}
 	public static final class menu {
 		public static final int eval_menu = 0x7f090001;
