@@ -89,7 +89,6 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 	private Camera camera;
 	private CameraPreview mPreview;
 	private SensorManager mSensorManager;
-	@SuppressWarnings("unused")
 	private Sensor linearAccelerometer, rotationSensor, geomagnetic, gravity;
 	
 	
@@ -181,7 +180,7 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 				JSONParams = new JSONObject();
 				try {
 				JSONParams.put("method", "client_query");
-				JSONParams.put("user", "chaoran");
+				JSONParams.put("user", "cyu");
 				JSONParams.put("database", "0815_db");
 				JSONParams.put("deadline_seconds", 60.0);
 				JSONObject JSONPose = new JSONObject();
@@ -205,8 +204,8 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 					e.printStackTrace();
 				}		
 							
-				new WifiQueryTask("http://django.kung-fu.org:8001/wifi/submit_fingerprint", query).execute(c);
-				new ImageQueryTask("http://ahvaz.eecs.berkeley.edu:8001/").execute(c);
+				new WifiQueryTask("http://shiraz.eecs.berkeley.edu:8001/wifi/submit_fingerprint", query).execute(c);
+				new ImageQueryTask("http://quebec.eecs.berkeley.edu:8001/").execute(c);
 			}
 		}
 		}
@@ -573,6 +572,8 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 		
 		mSensorManager.unregisterListener(this, linearAccelerometer);
 		mSensorManager.unregisterListener(this, rotationSensor);
+		mSensorManager.unregisterListener(this, geomagnetic);
+		mSensorManager.unregisterListener(this, gravity);
 		unregisterReceiver(receiver);
 	}
 	

@@ -68,6 +68,7 @@ import android.util.Base64;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
@@ -91,10 +92,9 @@ class ScanComparable implements Comparator<ScanResult> {
 
 public class LocalizePhone extends Activity implements SensorEventListener {
 	
-	@SuppressWarnings("unused")
-	private static final String WIFI_URL = "http://django.kung-fu.org:8001/wifi/submit_fingerprint";
+	private static final String WIFI_URL = "http://shiraz.eecs.berkeley.edu:8001/wifi/submit_fingerprint";
 	private static final String IMAGE_URL = "http://ahvaz.eecs.berkeley.edu:8001/";
-	private static final String CENTRAL_DYNAMIC_URL = "http://10.10.65.32:8000/central/receive_hdg_and_dis";
+	private static final String CENTRAL_DYNAMIC_URL = "http://10.10.67.248:8000/central/receive_hdg_and_dis";
 	
 	
 	File pictureFile;
@@ -148,6 +148,10 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	JSONObject integratedRequest = new JSONObject();
 	static byte[] image;
 	
+	private boolean mTouched;
+	private ArrayList<Float> Xrecord = new ArrayList<Float>();
+	private ArrayList<Float> Yrecord = new ArrayList<Float>();
+	
 	
 	
 	
@@ -155,6 +159,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 		private ArrayList<String> walls = new ArrayList<String>();
 		private Paint wallPaint = new Paint();
 		private Paint circlePaint = new Paint();
+		private Paint recordPaint = new Paint();
 		
 		public MapView(Context context) {
 			super(context);
@@ -163,6 +168,8 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 			wallPaint.setFlags(Paint.ANTI_ALIAS_FLAG);
 			circlePaint.setColor(Color.RED);
 			circlePaint.setFlags(Paint.ANTI_ALIAS_FLAG);
+			recordPaint.setColor(Color.BLUE);
+			recordPaint.setFlags(Paint.ANTI_ALIAS_FLAG);
 			
 			// Load floor map from Assets folder
 			AssetManager assetManager = getAssets();
@@ -190,9 +197,32 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	        	float y2 = -(Float.parseFloat(splited[3])-45)*13f;
 				canvas.drawLine(x1, y1, x2, y2, wallPaint);
 			}
+			for (int i=0; i<Xrecord.size(); i++) {
+				canvas.drawCircle(Xrecord.get(i).floatValue(), Yrecord.get(i).floatValue(), 8f, recordPaint);
+			}
 			Log.d("updated", updated + " " + currentLocation[0] + " " + currentLocation[1]);
-			Log.d("DRAW", "onDraw gets called!");
-			canvas.drawCircle((float)currentLocation[0], (float)currentLocation[1], 8f, circlePaint);
+			if (mTouched) {
+				circlePaint.setColor(Color.BLUE);
+				canvas.drawCircle((float)currentLocation[0], (float)currentLocation[1], 8f, circlePaint);
+				Xrecord.add((float) currentLocation[0]);
+				Yrecord.add((float) currentLocation[1]);
+				circlePaint.setColor(Color.RED);
+				mTouched = false;
+			}
+			else {
+				canvas.drawCircle((float)currentLocation[0], (float)currentLocation[1], 8f, circlePaint);
+			}
+		}
+		
+		public boolean onTouchEvent(MotionEvent event) {
+				
+			switch (event.getAction()) {
+			case MotionEvent.ACTION_UP:
+				mTouched = true;
+				Log.d("TOUCH", "touch event detected");
+				break;
+			}
+			return true;
 		}
 	}
 
@@ -231,7 +261,6 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	
 			Log.d("Timing", "Time2: Scanning finished!");
 
-			@SuppressWarnings("unused")
 			JSONObject query, queryCore;
 			@SuppressWarnings("unused")
 			JSONObject imageQuery;
@@ -262,7 +291,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				JSONParams = new JSONObject();
 				try {
 				JSONParams.put("method", "client_query");
-				JSONParams.put("user", "chaoran");
+				JSONParams.put("user", "cyu");
 				JSONParams.put("database", "0815_db");
 				JSONParams.put("deadline_seconds", 60.0);
 				JSONObject JSONPose = new JSONObject();
@@ -279,17 +308,17 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 					JSONReturn.put("image_data", false);
 					JSONReturn.put("image_only", false);
 					JSONReturn.put("pose_visualization_only", false);
-				JSONParams.put("return", JSONReturn);}
-				
+				JSONParams.put("return", JSONReturn);
+				}
 				catch (JSONException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 						
-				//Log.d("Timing", "Time3: RSSI vector sent to WiFi server!");
-				//new WifiQueryTask(WIFI_URL, query).execute(c);
+				Log.d("Timing", "Time3: RSSI vector sent to WiFi server!");
+				new WifiQueryTask(WIFI_URL, query).execute(c);
 				//Log.d("REQUEST", "WiFi Request sent!");		
-				new ImageQueryTask(IMAGE_URL).execute(c);
+				//new ImageQueryTask(IMAGE_URL).execute(c);
 			}
 		}
 		}
@@ -375,7 +404,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
         
         mSensorManager.registerListener(this, linearAccelerometer, SensorManager.SENSOR_DELAY_NORMAL);
         mSensorManager.registerListener(this, rotationSensor, SensorManager.SENSOR_DELAY_NORMAL);
-        mSensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+        mSensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_FASTEST);
         
         wifi = (WifiManager)getSystemService(Context.WIFI_SERVICE);
         
@@ -550,7 +579,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				     //Log.d("central_x", (Double.valueOf(finalResult.getDouble("x")).toString()));
 				     //Log.d("central_y", (Double.valueOf(finalResult.getDouble("y")).toString()));
 				     
-				     currentLocation[0] = (Double.valueOf(finalResult.getDouble("x")) + 23.0) * 13.0;
+				     currentLocation[0] = (Double.valueOf(finalResult.getDouble("x")) + 15.0) * 13.0;
 				     currentLocation[1] = -(Double.valueOf(finalResult.getDouble("y")) - 45.0) * 13.0;
 				     //updated = true;
 				     mapView.postInvalidate();
@@ -577,8 +606,6 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	
 
 	
-	
-	@SuppressWarnings("unused")
 	private class WifiQueryTask extends AsyncTask<Context, Void, Void> {
         private String url_str;
         private JSONObject json;
@@ -813,6 +840,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	
 	
 	
+	
 	/** Create a File for saving an image or video */
 	@SuppressLint("SimpleDateFormat")
 	private static File getOutputMediaFile(){
@@ -850,29 +878,26 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	}
 	
 	
-	private double displayStepDetectorState(MovingAverageStepDetector detector) {
+	double displayStepDetectorState(MovingAverageStepDetector detector) {
 		MovingAverageStepDetectorState s = detector.getState();
 		boolean stepDetected = s.states[0];
 		boolean signalPowerOutOfRange = s.states[1];
 		
 		if (stepDetected) {
 			if (signalPowerOutOfRange) {
-				//Log.d("Invalid Step", "Power out of range!");
+				Log.d("Invalid Step", "Power out of range!");
 				return -10.0;
 			} else {
 				Log.d("Valid Step", "Valid step!");
 				
 				JSONObject motion;
 				HashMap<String, Double> motionMap = new HashMap<String, Double>();
-				
 				motionMap.put("hdg", (double)orientation[0]);
 				motionMap.put("dis", detector.stepLength);
-				
 				motion = new JSONObject(motionMap);
-				
 				new CentralQueryTask(CENTRAL_DYNAMIC_URL, motion).execute(this.getApplicationContext());
 				
-				//Log.d("REQUEST", "Valid step sent to central server!");
+				Log.d("REQUEST", "Valid step sent to central server!");
 				return detector.stepLength;
 			}
 		}
