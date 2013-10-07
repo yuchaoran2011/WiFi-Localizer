@@ -52,6 +52,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.hardware.Camera;
 import android.hardware.Camera.PictureCallback;
+import android.hardware.Camera.Size;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -93,8 +94,8 @@ class ScanComparable implements Comparator<ScanResult> {
 public class LocalizePhone extends Activity implements SensorEventListener {
 	
 	private static final String WIFI_URL = "http://shiraz.eecs.berkeley.edu:8001/wifi/submit_fingerprint";
-	private static final String IMAGE_URL = "http://ahvaz.eecs.berkeley.edu:8001/";
-	private static final String CENTRAL_DYNAMIC_URL = "http://10.10.67.248:8000/central/receive_hdg_and_dis";
+	private static final String IMAGE_URL = "http://quebec.eecs.berkeley.edu:8001/";
+	private static final String CENTRAL_DYNAMIC_URL = "http://10.10.66.208:8000/central/receive_hdg_and_dis";
 	
 	
 	File pictureFile;
@@ -124,7 +125,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	
 	private BroadcastReceiver receiver;
 
-	private double[] currentLocation = {17.0*13.0, 44.6*13.0};
+	private double[] currentLocation = {28.0*13.0, 48.5*13.0};
 	private boolean updated = true;
 
 	private MovingAverageStepDetector mStepDetector;
@@ -175,7 +176,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 			AssetManager assetManager = getAssets();
 			InputStream input;
 	        try {
-	        	input = assetManager.open("cory2p.edge");   
+	        	input = assetManager.open("cory2p_rotated.edge");   
 	        	BufferedReader reader = new BufferedReader(new InputStreamReader(input));
 	        	String line= reader.readLine();
 	        	while (line != null) {
@@ -191,10 +192,10 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 		protected void onDraw(Canvas canvas) {
 			for (String line: walls) {
 				String[] splited = line.split("\\s+");
-	        	float x1 = (Float.parseFloat(splited[0])+15)*13f; // +23*13
-	        	float y1 = -(Float.parseFloat(splited[1])-45)*13f;
-	        	float x2 = (Float.parseFloat(splited[2])+15)*13f;
-	        	float y2 = -(Float.parseFloat(splited[3])-45)*13f;
+	        	float x1 = (Float.parseFloat(splited[0])+26)*13f; // +23*13
+	        	float y1 = -(Float.parseFloat(splited[1])-49)*13f;
+	        	float x2 = (Float.parseFloat(splited[2])+26)*13f;
+	        	float y2 = -(Float.parseFloat(splited[3])-49)*13f;
 				canvas.drawLine(x1, y1, x2, y2, wallPaint);
 			}
 			for (int i=0; i<Xrecord.size(); i++) {
@@ -317,7 +318,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 						
 				Log.d("Timing", "Time3: RSSI vector sent to WiFi server!");
 				new WifiQueryTask(WIFI_URL, query).execute(c);
-				//Log.d("REQUEST", "WiFi Request sent!");		
+				Log.d("REQUEST", "WiFi Request sent!");		
 				//new ImageQueryTask(IMAGE_URL).execute(c);
 			}
 		}
@@ -418,10 +419,10 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	            		Log.d("Timing", "Time1: Scanning started!");
 	            		scan();
 	            		timestamp = System.currentTimeMillis();
-	            		camera.takePicture(null, null, mPicture);
+	            		//camera.takePicture(null, null, mPicture);
 	            		//takePictureNoPreview(getApplicationContext());
 	            		camera.startPreview();       		
-	            		handler.postDelayed(this, 4500);
+	            		handler.postDelayed(this, 4500); // 4500
 	                }
 	            }
 	        };
@@ -467,8 +468,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
     {
         private String url_str;
 
-        public ImageQueryTask(String url)
-        {
+        public ImageQueryTask(String url) {
             this.url_str = url;
         }
         
@@ -487,6 +487,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 						entity.addPart("data", new FileBody(pictureFile));
 
 						Log.d("DATA", new FileBody(pictureFile).toString());
+						Log.d("Timing", "Image sent to server!");
 						
 						httppost.setEntity(entity);	
 						
@@ -494,6 +495,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 						String response = client.execute(httppost, res);
 						JSONObject JSONResponse = new JSONObject(response);
 						Log.d("ImageResponse", JSONResponse.toString());
+						Log.d("Timing", "Receive image response!");
 						
 						JSONObject imageResponse = new JSONObject();
 						imageResponse.put("location", JSONResponse.get("local_x") + " " + JSONResponse.get("local_y"));
@@ -579,8 +581,8 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				     //Log.d("central_x", (Double.valueOf(finalResult.getDouble("x")).toString()));
 				     //Log.d("central_y", (Double.valueOf(finalResult.getDouble("y")).toString()));
 				     
-				     currentLocation[0] = (Double.valueOf(finalResult.getDouble("x")) + 15.0) * 13.0;
-				     currentLocation[1] = -(Double.valueOf(finalResult.getDouble("y")) - 45.0) * 13.0;
+				     currentLocation[0] = (Double.valueOf(finalResult.getDouble("x")) + 26.0) * 13.0;
+				     currentLocation[1] = -(Double.valueOf(finalResult.getDouble("y")) - 49.0) * 13.0;
 				     //updated = true;
 				     mapView.postInvalidate();
 				     
@@ -778,7 +780,11 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 
 	        // set preview size and make any resize, rotate or
 	        // reformatting changes here
-
+	        Camera.Parameters parameters = mCamera.getParameters();
+	        List<Size> sizes = parameters.getSupportedPictureSizes();
+	        parameters.setPictureSize(sizes.get(6).width, sizes.get(6).height);// Picture dimension = 1152*864 < 1 megapixels
+	        mCamera.setParameters(parameters);
+	        
 	        // start preview with new settings
 	        try {
 	            mCamera.setPreviewDisplay(mHolder);
@@ -818,7 +824,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	            Log.d("TAG5: ", "Error accessing file: " + e.getMessage());
 	        }
 	        
-	        
+	        /*
 	        FileInputStream fis = null;
 		    try {
 		        fis = new FileInputStream(pictureFile);
@@ -829,9 +835,9 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 
 		    Bitmap bm = BitmapFactory.decodeStream(fis);
 		    ByteArrayOutputStream baos = new ByteArrayOutputStream();  
-		    bm.compress(Bitmap.CompressFormat.JPEG, 100 , baos);    
-		    image = baos.toByteArray(); 
-		    encImage = Base64.encodeToString(image, Base64.DEFAULT);
+		    bm.compress(Bitmap.CompressFormat.JPEG, 100 , baos);    */
+		    //image = baos.toByteArray(); 
+		    //encImage = Base64.encodeToString(image, Base64.DEFAULT);
 		    
 		    //pictureFile.delete();
 	    }

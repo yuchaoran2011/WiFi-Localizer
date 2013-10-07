@@ -140,7 +140,6 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 
 		
 		
-		
 		@Override
 		public void onReceive(Context c, Intent i){
 		// Code to execute when SCAN_RESULTS_AVAILABLE_ACTION event occurs
@@ -168,14 +167,10 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 					macRSSI.put(scan.BSSID.toString(), scan.level);
 				}
 				
-				
-				
 				queryCore = new JSONObject(macRSSI);
 				postedData.put("fingerprint_data", queryCore);
 				query = new JSONObject(postedData);
-				
-				
-				
+
 				
 				JSONParams = new JSONObject();
 				try {
@@ -205,6 +200,7 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 				}		
 							
 				new WifiQueryTask("http://shiraz.eecs.berkeley.edu:8001/wifi/submit_fingerprint", query).execute(c);
+				Log.d("Timing", "Time3: Image sent to server!");
 				new ImageQueryTask("http://quebec.eecs.berkeley.edu:8001/").execute(c);
 			}
 		}
@@ -273,32 +269,26 @@ public class StaticLocalization extends Activity implements SensorEventListener 
         mSensorManager.registerListener(this, geomagnetic, SensorManager.SENSOR_DELAY_NORMAL);
         
         
-        
         wifi = (WifiManager)getSystemService(Context.WIFI_SERVICE);
         
 		if (wifi.isWifiEnabled()) {
-			
 			final Runnable r = new Runnable()
 	        {
 	            public void run() 
 	            {
 	            	if(!mAppStopped) {
-	            		
 	            		camera.startPreview();
 	            		scan();
 	            		timestamp = System.currentTimeMillis();
+	            		Log.d("Timing", "Time1: Start taking picture!");
 	            		camera.takePicture(null, null, mPicture);
+	            		Log.d("Timing", "Time2: Finish taking picture!");
 	            		camera.startPreview();
-	            		handler.postDelayed(this, 4000);
-	                }
-	                
+	            		handler.postDelayed(this, 120000); //4000
+	                }      
 	            }
 	        };
-
 			handler.postDelayed(r, 10);
-	        
-			
-			
 		}
 		else {
 			textView = new TextView(this);
@@ -306,16 +296,12 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 			textView.setText("Wi-Fi is currently turned off. To find out your location in the building, turn Wi-Fi on and then try again.");
 			setContentView(textView);
 		}
-		
-		
-		
 	}
 	
 	
 	
 	
-	public void scan() {
-		
+	public void scan() {	
 		if (wifi.startScan()) { }
 		else {
 			Log.d("SCANNING_FAILURE","Wi-Fi is turned off!");
@@ -338,12 +324,15 @@ public class StaticLocalization extends Activity implements SensorEventListener 
         
         
         protected Void doInBackground(Context... c) {
+        	String boundary = "-------------------------";
 			try {
 				URL url = new URL(url_str);
 				HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
 				   try {
 					   DefaultHttpClient client = new DefaultHttpClient();
-						client.getParams().setParameter(CoreProtocolPNames.PROTOCOL_VERSION, HttpVersion.HTTP_1_1);
+					   urlConnection.setRequestProperty("Content-Type", "multipart/form-data;boundary=" + boundary);
+					   urlConnection.setRequestMethod("POST");
+						//client.getParams().setParameter(CoreProtocolPNames.PROTOCOL_VERSION, HttpVersion.HTTP_1_1);
 						HttpPost httppost = new HttpPost(url.toString());
 						MultipartEntity entity = new MultipartEntity(HttpMultipartMode.BROWSER_COMPATIBLE);					
 					
@@ -364,9 +353,11 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 						imageResponse.put("confidence", JSONResponse.get("overall_confidence"));
 						integratedRequest.put("imageResponse", imageResponse);
 						
+						Log.d("Timing", "Time4: Received response from image server!");
+						
 						//Toast.makeText(c[0], (CharSequence)("Image Location" + JSONResponse.get("local_x") + " " + JSONResponse.get("local_y")), Toast.LENGTH_SHORT).show();
 						
-						new CentralQueryTask(CENTRAL_STATIC_URL, integratedRequest).execute(c);
+						//new CentralQueryTask(CENTRAL_STATIC_URL, integratedRequest).execute(c);
 						
 						Log.d("integratedRequest", integratedRequest.toString());
 						
@@ -703,9 +694,9 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 		        e.printStackTrace();
 		    }
 
-		    Bitmap bm = BitmapFactory.decodeStream(fis);
+		    //Bitmap bm = BitmapFactory.decodeStream(fis);
 		    ByteArrayOutputStream baos = new ByteArrayOutputStream();  
-		    bm.compress(Bitmap.CompressFormat.JPEG, 100 , baos);    
+		    //bm.compress(Bitmap.CompressFormat.JPEG, 100 , baos);    
 		    image = baos.toByteArray(); 
 		    encImage = Base64.encodeToString(image, Base64.DEFAULT);
 		    
