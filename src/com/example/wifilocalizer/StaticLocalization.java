@@ -21,7 +21,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 
-import org.apache.http.HttpVersion;
 import org.apache.http.client.ResponseHandler;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.mime.HttpMultipartMode;
@@ -30,7 +29,6 @@ import org.apache.http.entity.mime.content.FileBody;
 import org.apache.http.entity.mime.content.StringBody;
 import org.apache.http.impl.client.BasicResponseHandler;
 import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.params.CoreProtocolPNames;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
@@ -42,8 +40,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.hardware.Camera;
 import android.hardware.Camera.PictureCallback;
 import android.hardware.Camera.Size;
@@ -74,6 +70,7 @@ import android.widget.TextView;
 public class StaticLocalization extends Activity implements SensorEventListener {
 
 	
+	@SuppressWarnings("unused")
 	private static final String CENTRAL_STATIC_URL = "http://10.10.66.121:8000/central/static_fusion";
 	
 	static byte[] image;
@@ -383,6 +380,7 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 	
 	
 	
+	@SuppressWarnings("unused")
 	private class CentralQueryTask extends AsyncTask<Context, Void, Void> 
     {
         private String url_str;
@@ -686,7 +684,8 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 	        }
 	        
 	        
-	        FileInputStream fis = null;
+	        @SuppressWarnings("unused")
+			FileInputStream fis = null;
 		    try {
 		        fis = new FileInputStream(pictureFile);
 		    } 
@@ -779,7 +778,6 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 			
 			
 	   else if (type == Sensor.TYPE_ROTATION_VECTOR) {
-		   long currTimestamp = System.currentTimeMillis(); 
 		   orientation = new float[3];
 		   
 		   newRotationVector = event.values.clone();
@@ -791,17 +789,6 @@ public class StaticLocalization extends Activity implements SensorEventListener 
 			   //Log.d("DELTA_ROTATION", deltaRotationVector[0] + " " + deltaRotationVector[1] + " " + deltaRotationVector[2]);
 		   }
 		   SensorManager.getRotationMatrixFromVector(rotationMatrix, newRotationVector);
-		   
-		   
-		   /*
-		   if (currTimestamp >= timestamp) {
-			   SensorManager.getOrientation(rotationMatrix, orientation);
-			   cameraPose[2] = (float) Math.round(Math.toDegrees(orientation[2])*100)/100; // Row
-			   cameraPose[1] = (float) Math.round(Math.toDegrees(orientation[1])*100)/100; // Pitch
-			   cameraPose[0] = (float) Math.round(Math.toDegrees(orientation[0])*100)/100; // Yaw
-			   //Log.d("ORIENTATION", cameraPose[0]+" "+cameraPose[1]+" "+cameraPose[2]);
-			   Log.d("YAW", cameraPose[2] + "");
-		   }*/
 		   
 		   
 		   

@@ -16,5 +16,6 @@
     <string name="title_activity_mark_on_map">MarkOnMap</string>
     <string name="title_activity_rotation_vector_demo">Rotation Vector Demo</string>
     <string name="title_activity_static_localization">Static Localization</string>
+    
 
 </resources>
