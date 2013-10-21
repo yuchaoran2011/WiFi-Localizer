@@ -54,8 +54,7 @@
         <activity
             android:name="com.example.wifilocalizer.LocalizePhone"
             android:label="@string/title_activity_localize_phone"
-            android:parentActivityName="com.example.wifilocalizer.MainActivity"
-            android:screenOrientation="portrait" >
+            android:parentActivityName="com.example.wifilocalizer.MainActivity" >
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.example.wifilocalizer.MainActivity" />
