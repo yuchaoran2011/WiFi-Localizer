@@ -281,39 +281,9 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				postedData.put("fingerprint_data", queryCore);
 				query = new JSONObject(postedData);	
 
-				JSONParams = new JSONObject();
-				try {
-				JSONParams.put("method", "client_query");
-				JSONParams.put("user", "cyu");
-				JSONParams.put("database", "0815_db");
-				JSONParams.put("deadline_seconds", 60.0);
-				JSONObject JSONPose = new JSONObject();
-					JSONPose.put("latitude", 0);
-					JSONPose.put("longitude", 0);
-					JSONPose.put("yaw", cameraPose[0]);
-					JSONPose.put("pitch", cameraPose[1]);
-					JSONPose.put("roll", cameraPose[2]);
-					JSONPose.put("ambiguity_meters", 1e99); //hack for now
-				JSONParams.put("pose",JSONPose);
-				JSONObject JSONReturn = new JSONObject();
-				    JSONReturn.put("statistics", true);
-					JSONReturn.put("estimated_client_pose", true);
-					JSONReturn.put("image_data", false);
-					JSONReturn.put("image_only", false);
-					JSONReturn.put("pose_visualization_only", false);
-				JSONParams.put("return", JSONReturn);
-				}
-				catch (JSONException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-
 				//Log.d("Timing", "Time3: RSSI vector sent to WiFi server!");
 				new WifiQueryTask(WIFI_URL, query).execute(c);
-				//Log.d("REQUEST", "WiFi Request sent!");	
-				if (pictureFile != null) {
-					new ImageQueryTask(IMAGE_URL).execute(c);
-				}
+				Log.d("REQUEST", "WiFi Request sent!");	
 			}
 		}
 		}
@@ -414,6 +384,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 			setContentView(textView);
 		}
 		
+		
 		 Runnable r2 = new Runnable() {
 
 		        @Override
@@ -423,7 +394,39 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 		        		timestamp = System.currentTimeMillis();
 		        		camera.takePicture(null, null, mPicture);
 		        		camera.startPreview(); 
-		        		Log.d("Picture", "Before");
+
+		        		if (pictureFile != null) {
+		        			JSONParams = new JSONObject();
+		    				try {
+		    					JSONParams.put("method", "client_query");
+		    					JSONParams.put("user", "cyu");
+		    					JSONParams.put("database", "0815_db");
+		    					JSONParams.put("deadline_seconds", 60.0);
+		    					JSONObject JSONPose = new JSONObject();
+		    						JSONPose.put("latitude", 0);
+		    						JSONPose.put("longitude", 0);
+		    						JSONPose.put("yaw", cameraPose[0]);
+		    						JSONPose.put("pitch", cameraPose[1]);
+		    						JSONPose.put("roll", cameraPose[2]);
+		    						JSONPose.put("ambiguity_meters", 1e99); //hack for now
+		    					JSONParams.put("pose",JSONPose);
+		    					JSONObject JSONReturn = new JSONObject();
+		    					    JSONReturn.put("statistics", true);
+		    						JSONReturn.put("estimated_client_pose", true);
+		    						JSONReturn.put("image_data", false);
+		    						JSONReturn.put("image_only", false);
+		    						JSONReturn.put("pose_visualization_only", false);
+		    					JSONParams.put("return", JSONReturn);
+		    				}
+		    				catch (JSONException e) {
+		    					// TODO Auto-generated catch block
+		    					e.printStackTrace();
+		    				}
+		        			
+		    				Log.d("Picture", "Before image sent to image server");
+							new ImageQueryTask(IMAGE_URL).execute(getApplicationContext());
+							Log.d("Picture", "Image sent to image server");
+						}
             			handler.postDelayed(this, 12000);
 		        	}
 		        }
@@ -634,7 +637,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				     wifiResponseMap.put("wifi_confidence", (Double.valueOf(finalResult.getDouble("confidence")).toString()));
 				     wifiResponse = new JSONObject(wifiResponseMap);
 
-				     //Log.d("Timing", "Time5: WiFi location sent to central server for processing!");
+				     Log.d("Timing", "Time5: WiFi location sent to central server for processing!");
 				     new CentralQueryTask(CENTRAL_DYNAMIC_URL, wifiResponse).execute(c);
 
 				     in.close();
@@ -853,7 +856,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 
 		if (stepDetected) {
 			if (signalPowerOutOfRange) {
-				Log.d("Invalid Step", "Power out of range!");
+				//Log.d("Invalid Step", "Power out of range!");
 				return -10.0;
 			} else {
 				Log.d("Valid Step", "Valid step!");
