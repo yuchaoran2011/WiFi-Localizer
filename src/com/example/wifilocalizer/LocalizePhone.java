@@ -94,7 +94,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 
 	private static final String WIFI_URL = "http://shiraz.eecs.berkeley.edu:8001/wifi/submit_fingerprint";
 	private static final String IMAGE_URL = "http://quebec.eecs.berkeley.edu:8001/";
-	private static final String CENTRAL_DYNAMIC_URL = "http://10.10.66.208:8000/central/receive_hdg_and_dis";
+	private static final String CENTRAL_DYNAMIC_URL = "http://10.10.66.41:8000/central/receive_hdg_and_dis";
 
 
 	File pictureFile;
@@ -282,8 +282,8 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				query = new JSONObject(postedData);	
 
 				//Log.d("Timing", "Time3: RSSI vector sent to WiFi server!");
-				new WifiQueryTask(WIFI_URL, query).execute(c);
-				Log.d("REQUEST", "WiFi Request sent!");	
+				//new WifiQueryTask(WIFI_URL, query).execute(c);
+				//Log.d("REQUEST", "WiFi Request sent!");	
 			}
 		}
 		}
@@ -370,7 +370,6 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	            	if(!mAppStopped) {		
 	            		//Log.d("Timing", "Time1: Scanning started!");
 	            		scan();
-	            		Log.d("WiFi", "Before");
 	            		handler.postDelayed(this, 4500);
 	                }
 	            }
@@ -392,7 +391,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 		        	if(!mAppStopped) {
 		        		camera.startPreview();
 		        		timestamp = System.currentTimeMillis();
-		        		camera.takePicture(null, null, mPicture);
+		        		//camera.takePicture(null, null, mPicture);
 		        		camera.startPreview(); 
 
 		        		if (pictureFile != null) {
@@ -423,9 +422,9 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 		    					e.printStackTrace();
 		    				}
 		        			
-		    				Log.d("Picture", "Before image sent to image server");
-							new ImageQueryTask(IMAGE_URL).execute(getApplicationContext());
-							Log.d("Picture", "Image sent to image server");
+		    				//Log.d("Picture", "Before image sent to image server");
+							//new ImageQueryTask(IMAGE_URL).execute(getApplicationContext());
+							//Log.d("Picture", "Image sent to image server");
 						}
             			handler.postDelayed(this, 12000);
 		        	}
@@ -557,7 +556,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 
 				     //Log.d("Timing", "Time6: Estimated location from central server obtained!");
 
-				     currentLocation[0] = (Double.valueOf(finalResult.getDouble("x")) + 26.0) * 13.0;
+				     currentLocation[0] = (Double.valueOf(finalResult.getDouble("x")) + 20.0) * 13.0;
 				     currentLocation[1] = -(Double.valueOf(finalResult.getDouble("y")) - 49.0) * 13.0;
 				     //updated = true;
 				     mapView.postInvalidate();
@@ -925,12 +924,12 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 			   //Log.d("YAW", cameraPose[2] + "");
 		   }
 
-		   for (int i=0;i<4;i++) {
+		   for (int i=0; i<4; ++i) {
 			   globalDeltaRotationVector[i] = 0;
 			   globalAcceleration[i] = 0;
            }
            
-           for (int i=0;i<4;i++) {
+           for (int i=0; i<4; ++i) {
         	   for (int j=0;j<4;j++) {
         		   globalDeltaRotationVector[i] += rotationMatrix[(i+1)*(j+1)-1] * deltaRotationVector[i];
         		   globalAcceleration[i] += rotationMatrix[(i+1)*(j+1)-1] * linearAcceleration[i];
