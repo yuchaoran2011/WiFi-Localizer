@@ -14,9 +14,12 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+    
     <uses-permission android:name="android.permission.CAMERA" />
-
     <uses-feature android:name="android.hardware.camera" />
+    <uses-feature android:name="android.hardware.camera.autofocus" />
+    <uses-feature android:name="android.hardware.camera.flash" />
+    
     <uses-feature
         android:name="android.hardware.sensor.accelerometer"
         android:required="true" />
@@ -54,7 +57,8 @@
         <activity
             android:name="com.example.wifilocalizer.LocalizePhone"
             android:label="@string/title_activity_localize_phone"
-            android:parentActivityName="com.example.wifilocalizer.MainActivity" >
+            android:parentActivityName="com.example.wifilocalizer.MainActivity"
+            android:screenOrientation="portrait" >
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.example.wifilocalizer.MainActivity" />

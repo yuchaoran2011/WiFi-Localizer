@@ -37,6 +37,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 
+import Jama.Matrix;
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.app.Activity;
@@ -51,6 +52,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.hardware.Camera;
+import android.hardware.Camera.AutoFocusCallback;
 import android.hardware.Camera.PictureCallback;
 import android.hardware.Camera.Size;
 import android.hardware.Sensor;
@@ -74,6 +76,9 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.TextView;
+
+import com.example.wifilocalizer.PCA.PrincipalComponent;
+
 import cz.muni.fi.sandbox.dsp.filters.ContinuousConvolution;
 import cz.muni.fi.sandbox.dsp.filters.FrequencyCounter;
 import cz.muni.fi.sandbox.dsp.filters.SinXPiWindow;
@@ -94,7 +99,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 
 	private static final String WIFI_URL = "http://shiraz.eecs.berkeley.edu:8001/wifi/submit_fingerprint";
 	private static final String IMAGE_URL = "http://quebec.eecs.berkeley.edu:8001/";
-	private static final String CENTRAL_DYNAMIC_URL = "http://10.10.66.41:8000/central/receive_hdg_and_dis";
+	private static final String CENTRAL_DYNAMIC_URL = "http://136.152.39.129:8000/central/receive_hdg_and_dis";
 
 
 	File pictureFile;
@@ -112,9 +117,10 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	private Sensor linearAccelerometer, rotationSensor, accelerometer;
 
 
-	private float[] linearAcceleration = new float[4];
-	private float[] globalDeltaRotationVector = {0, 0, 0, 0};
-	private float[] globalAcceleration = {0, 0, 0, 0};
+	private ArrayList<Float> la1 = new ArrayList<Float>();
+	private ArrayList<Float> la2 = new ArrayList<Float>();
+	private ArrayList<Float> la3 = new ArrayList<Float>();
+	//private ArrayList<Float> la3 = new ArrayList<Float>();
 	private float[] rotationMatrix = new float[16];
 	private float[] newRotationVector = new float[3], oldRotationVector = new float[3], deltaRotationVector = new float[4];
 
@@ -125,7 +131,6 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	private BroadcastReceiver receiver;
 
 	private double[] currentLocation = {22.0*13.0, 48.5*13.0};
-	private boolean updated = true;
 
 	private MovingAverageStepDetector mStepDetector;
 	private ContinuousConvolution mCC;
@@ -199,7 +204,6 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 			for (int i=0; i<Xrecord.size(); i++) {
 				canvas.drawCircle(Xrecord.get(i).floatValue(), Yrecord.get(i).floatValue(), 8f, recordPaint);
 			}
-			Log.d("updated", updated + " " + currentLocation[0] + " " + currentLocation[1]);
 			if (mTouched) {
 				circlePaint.setColor(Color.BLUE);
 				canvas.drawCircle((float)currentLocation[0], (float)currentLocation[1], 8f, circlePaint);
@@ -282,7 +286,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				query = new JSONObject(postedData);	
 
 				//Log.d("Timing", "Time3: RSSI vector sent to WiFi server!");
-				//new WifiQueryTask(WIFI_URL, query).execute(c);
+				new WifiQueryTask(WIFI_URL, query).execute(c);
 				//Log.d("REQUEST", "WiFi Request sent!");	
 			}
 		}
@@ -355,9 +359,9 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 
         mAppStopped = false; 
         
-        mSensorManager.registerListener(this, linearAccelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+        mSensorManager.registerListener(this, linearAccelerometer, SensorManager.SENSOR_DELAY_GAME);
         mSensorManager.registerListener(this, rotationSensor, SensorManager.SENSOR_DELAY_NORMAL);
-        mSensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_FASTEST);
+        mSensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_GAME);
         
         wifi = (WifiManager)getSystemService(Context.WIFI_SERVICE);
         
@@ -375,14 +379,6 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	            }
 	        };
 			handler.postDelayed(r1, 50);
-		}
-		else {
-			textView = new TextView(this);
-			textView.setTextSize(17);
-			textView.setText("Wi-Fi is currently turned off. To find out your location in the building, turn Wi-Fi on and then try again.");
-			setContentView(textView);
-		}
-		
 		
 		 Runnable r2 = new Runnable() {
 
@@ -391,7 +387,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 		        	if(!mAppStopped) {
 		        		camera.startPreview();
 		        		timestamp = System.currentTimeMillis();
-		        		//camera.takePicture(null, null, mPicture);
+		        		camera.autoFocus(new AFCallback());
 		        		camera.startPreview(); 
 
 		        		if (pictureFile != null) {
@@ -407,7 +403,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 		    						JSONPose.put("yaw", cameraPose[0]);
 		    						JSONPose.put("pitch", cameraPose[1]);
 		    						JSONPose.put("roll", cameraPose[2]);
-		    						JSONPose.put("ambiguity_meters", 1e99); //hack for now
+		    						JSONPose.put("ambiguity_meters", 1e12); //hack for now
 		    					JSONParams.put("pose",JSONPose);
 		    					JSONObject JSONReturn = new JSONObject();
 		    					    JSONReturn.put("statistics", true);
@@ -423,23 +419,45 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 		    				}
 		        			
 		    				//Log.d("Picture", "Before image sent to image server");
-							//new ImageQueryTask(IMAGE_URL).execute(getApplicationContext());
+							new ImageQueryTask(IMAGE_URL).execute(getApplicationContext());
 							//Log.d("Picture", "Image sent to image server");
 						}
-            			handler.postDelayed(this, 12000);
+            			handler.postDelayed(this, 10000);//12000
 		        	}
 		        }
 		    }; 
-		    handler.postDelayed(r2, 3000); 
+		    handler.postDelayed(r2, 2500); 
+		    
+		}
+		else {
+			textView = new TextView(this);
+			textView.setTextSize(17);
+			textView.setText("Wi-Fi is currently turned off. To find out your location in the building, turn Wi-Fi on and then try again.");
+			setContentView(textView);
+		}
 	}
 
 
 
 
-	public void scan() {
+	private void scan() {
 		if (wifi.startScan()) { }
 		else {
 			Log.d("SCANNING_FAILURE","Wi-Fi is turned off!");
+		}
+	}
+	
+	
+	private class AFCallback implements AutoFocusCallback {
+		@Override
+		public void onAutoFocus(boolean success, Camera arg1) {
+			if (success) {
+				arg1.takePicture(null, null, mPicture);
+				Log.d("Picture", "Picture taken!");
+			}
+			else {
+				Log.d("AUTO-FOCUS", "Auto Focus failed");
+			}
 		}
 	}
 
@@ -488,7 +506,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				   } catch (JSONException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
-					}
+					} 
 				    finally {
 				     urlConnection.disconnect();
 				    }
@@ -558,7 +576,6 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 
 				     currentLocation[0] = (Double.valueOf(finalResult.getDouble("x")) + 20.0) * 13.0;
 				     currentLocation[1] = -(Double.valueOf(finalResult.getDouble("y")) - 49.0) * 13.0;
-				     //updated = true;
 				     mapView.postInvalidate();
 
 				     in.close();
@@ -717,7 +734,8 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	        // The Surface has been created, now tell the camera where to draw the preview.
 
 	        try {
-	            mCamera.setPreviewDisplay(holder);          
+	            mCamera.setPreviewDisplay(holder);       
+	            mCamera.setDisplayOrientation(90);
 	            mCamera.startPreview();
 	            //this.setVisibility(View.GONE);
 	        } catch (IOException e) {
@@ -747,13 +765,27 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 
 	        // set preview size and make any resize, rotate or
 	        // reformatting changes here
+	         
 	        Camera.Parameters parameters = mCamera.getParameters();
+	        
+	        //Log.d("Supported scene modes", parameters.getSupportedSceneModes().toString());
+	        //Log.d("Exposure Compensation", parameters.getMaxExposureCompensation() + " " + parameters.getMinExposureCompensation());
 	        List<Size> sizes = parameters.getSupportedPictureSizes();
-	        parameters.setPictureSize(sizes.get(6).width, sizes.get(6).height);// Picture dimension = 1152*864 < 1 megapixels
+	        parameters.setPictureSize(sizes.get(4).width, sizes.get(4).height);// Picture dimension(6) = 1152*864 < 1 megapixels
+	        //parameters.setSceneMode(Camera.Parameters.SCENE_MODE_STEADYPHOTO); 
+	        parameters.setSceneMode(Camera.Parameters.SCENE_MODE_ACTION);
+	        parameters.setExposureCompensation(-2);
+	        //parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
+	        parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
+	        parameters.setFlashMode(Camera.Parameters.FLASH_MODE_AUTO);
+	        parameters.set("orientation", "portrait");
+            parameters.set("rotation", 90);
+	        Log.d("Parameters", sizes.get(0).width + " " + sizes.get(0).height);
 	        mCamera.setParameters(parameters);
 
 	        // start preview with new settings
 	        try {
+	        	mCamera.setDisplayOrientation(90);
 	            mCamera.setPreviewDisplay(mHolder);
 	            mCamera.startPreview();
 
@@ -818,14 +850,14 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	    // using Environment.getExternalStorageState() before doing this.
 
 	    File mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(
-	              Environment.DIRECTORY_PICTURES), "ImageExperiments");
+	              Environment.DIRECTORY_PICTURES), "LocalizingImages");
 	    // This location works best if you want the created images to be shared
 	    // between applications and persist after your app has been uninstalled.
 
 	    // Create the storage directory if it does not exist
 	    if (! mediaStorageDir.exists()){
 	        if (! mediaStorageDir.mkdirs()){
-	            Log.d("LocalizingImages", "failed to create directory");
+	            Log.d("ImageExperiments", "failed to create directory");
 	            return null;
 	        }
 	    }
@@ -859,10 +891,47 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				return -10.0;
 			} else {
 				Log.d("Valid Step", "Valid step!");
+					
+				/*
+				// If a step is detected, do PCA on linear acceleration values to get user heading
+				double[][] floatData = new double[3][la1.size()];
+				for (int i=0; i<la1.size(); ++i) {
+					floatData[0][i] = la1.get(i);
+					floatData[1][i] = la2.get(i);
+					floatData[2][i] = la3.get(i);
+				}
+				
+				Matrix matrixData = (new Matrix(floatData)).transpose();
+				//double[][] matrixAdjusted = PCA.getMeanAdjusted(matrixData.getArray(), pca.getMeans());
+				PCA pca = new PCA(matrixData.getArray());
+				List<PrincipalComponent> mainComponents = pca.getDominantComponents(3);
+				PrincipalComponent largestPC = mainComponents.get(0); 
+				//Log.d("PCA", largestPC.eigenVector[0] + " " + largestPC.eigenVector[1]);
+				
+				
+				int sumOfDotProducts = 0;
+				for (int i=0; i<la1.size(); ++i) {
+					sumOfDotProducts += (la1.get(i) * largestPC.eigenVector[0]) + (la2.get(i) * largestPC.eigenVector[1]);
+				}
+				int sign = sumOfDotProducts>0?1:-1;
+				double angle = Math.atan(largestPC.eigenVector[1] / largestPC.eigenVector[0]);
+				if (sign == -1) {
+					angle -= Math.PI;
+				}
+				angle += 3*Math.PI/2;
+				Log.d("PCA", angle + "");
+				//Log.d("PCA", mainComponents.get(0).eigenValue + " " + mainComponents.get(1).eigenValue);
+				
+				// Reset linear acceleration values
+				la1.clear();
+				la2.clear();
+				la3.clear();*/
+				
 
 				JSONObject motion;
 				HashMap<String, Double> motionMap = new HashMap<String, Double>();
 				motionMap.put("hdg", (double)orientation[0]);
+				//motionMap.put("hdg", angle);
 				motionMap.put("dis", detector.stepLength);
 				motion = new JSONObject(motionMap);
 				new CentralQueryTask(CENTRAL_DYNAMIC_URL, motion).execute(this.getApplicationContext());
@@ -889,6 +958,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 
 		synchronized (this) {
 				if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+					
 					processAccelerometerEvent(event);
 					freqCounter.push(event.timestamp);
 					float rate = freqCounter.getRateF();
@@ -896,14 +966,24 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 						mSpeed = 100f / rate;
 				}
 			}
-
+		/*
 		if (type == Sensor.TYPE_LINEAR_ACCELERATION) {
-			linearAcceleration[0] = event.values[0];
-			linearAcceleration[1] = event.values[1];
-			linearAcceleration[2] = event.values[2];
-			linearAcceleration[3] = 0;
-		}		   
-	   else if (type == Sensor.TYPE_ROTATION_VECTOR) {
+			
+			float resultVec[] = new float[4];
+            float accVals[]= event.values.clone();
+            float relativeacc[] = new float[4];
+            relativeacc[0] = accVals[0];
+            relativeacc[1] = accVals[1];
+            relativeacc[2] = accVals[2];
+            relativeacc[3] = 0;
+            android.opengl.Matrix.multiplyMV(resultVec, 0, rotationMatrix, 0, relativeacc, 0);
+            //Log.d("PCA", "resultVec: " + resultVec[0] + " " + resultVec[1] + " " + resultVec[2] + " " + resultVec[3] + " ");
+			la1.add(resultVec[0]);
+			la2.add(resultVec[1]);
+			la3.add(resultVec[2]);
+			
+		}	*/ 
+	   if (type == Sensor.TYPE_ROTATION_VECTOR) {
 		   long currTimestamp = System.currentTimeMillis(); 
 		   orientation = new float[3];
 
@@ -921,20 +1001,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 			   cameraPose[0] = (float) Math.round(Math.toDegrees(orientation[2])*100)/100; // Row
 			   cameraPose[1] = (float) Math.round(Math.toDegrees(orientation[1])*100)/100; // Pitch
 			   cameraPose[2] = (float) Math.round(Math.toDegrees(orientation[0])*100)/100; // Yaw
-			   //Log.d("YAW", cameraPose[2] + "");
 		   }
-
-		   for (int i=0; i<4; ++i) {
-			   globalDeltaRotationVector[i] = 0;
-			   globalAcceleration[i] = 0;
-           }
-           
-           for (int i=0; i<4; ++i) {
-        	   for (int j=0;j<4;j++) {
-        		   globalDeltaRotationVector[i] += rotationMatrix[(i+1)*(j+1)-1] * deltaRotationVector[i];
-        		   globalAcceleration[i] += rotationMatrix[(i+1)*(j+1)-1] * linearAcceleration[i];
-        	   }
-           }
            oldRotationVector[0] = newRotationVector[0];
            oldRotationVector[1] = newRotationVector[1];
            oldRotationVector[2] = newRotationVector[2];
