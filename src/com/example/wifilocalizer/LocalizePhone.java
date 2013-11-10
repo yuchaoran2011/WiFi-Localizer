@@ -75,6 +75,7 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 import cz.muni.fi.sandbox.dsp.filters.ContinuousConvolution;
 import cz.muni.fi.sandbox.dsp.filters.FrequencyCounter;
 import cz.muni.fi.sandbox.dsp.filters.SinXPiWindow;
@@ -95,7 +96,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 
 	private static final String WIFI_URL = "http://shiraz.eecs.berkeley.edu:8001/wifi/submit_fingerprint";
 	private static final String IMAGE_URL = "http://quebec.eecs.berkeley.edu:8001/";
-	private static final String CENTRAL_DYNAMIC_URL = "http://136.152.140.59:8000/central/receive_hdg_and_dis";
+	private static final String CENTRAL_DYNAMIC_URL = "http://136.152.38.222:8000/central/receive_hdg_and_dis";
 
 
 	File pictureFile;
@@ -251,15 +252,9 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 		@Override
 		public void onReceive(Context c, Intent i){
 
-			//Log.d("Timing", "Time2: Scanning finished!");
-
 			JSONObject query, queryCore;
-			@SuppressWarnings("unused")
-			JSONObject imageQuery;
-
 			HashMap<String,Integer> macRSSI = new HashMap<String,Integer>();
 			HashMap<String, JSONObject> postedData = new HashMap<String, JSONObject>();
-
 			List<ScanResult> scanResults = wifi.getScanResults();
 
 			if(scanResults == null || scanResults.isEmpty()) {
@@ -280,9 +275,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				postedData.put("fingerprint_data", queryCore);
 				query = new JSONObject(postedData);	
 
-				//Log.d("Timing", "Time3: RSSI vector sent to WiFi server!");
-				//new WifiQueryTask(WIFI_URL, query).execute(c);
-				//Log.d("REQUEST", "WiFi Request sent!");	
+				new WifiQueryTask(WIFI_URL, query).execute(c);
 			}
 		}
 		}
@@ -367,7 +360,6 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	            public void run() 
 	            {
 	            	if(!mAppStopped) {		
-	            		//Log.d("Timing", "Time1: Scanning started!");
 	            		scan();
 	            		handler.postDelayed(this, 4500);
 	                }
@@ -382,7 +374,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 		        	if(!mAppStopped) {
 		        		camera.startPreview();
 		        		timestamp = System.currentTimeMillis();
-		        		//camera.autoFocus(new AFCallback());
+		        		camera.autoFocus(new AFCallback());
 		        		camera.startPreview(); 
 
 		        		if (pictureFile != null) {
@@ -391,14 +383,14 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 		    					JSONParams.put("method", "client_query");
 		    					JSONParams.put("user", "cyu");
 		    					JSONParams.put("database", "0815_db");
-		    					JSONParams.put("deadline_seconds", 60.0);
+		    					JSONParams.put("deadline_seconds", 20.0);
 		    					JSONObject JSONPose = new JSONObject();
 		    						JSONPose.put("latitude", 0);
 		    						JSONPose.put("longitude", 0);
 		    						JSONPose.put("yaw", cameraPose[0]);
 		    						JSONPose.put("pitch", cameraPose[1]);
 		    						JSONPose.put("roll", cameraPose[2]);
-		    						JSONPose.put("ambiguity_meters", 1e12); //hack for now
+		    						JSONPose.put("ambiguity_meters", 1e12);
 		    					JSONParams.put("pose",JSONPose);
 		    					JSONObject JSONReturn = new JSONObject();
 		    					    JSONReturn.put("statistics", true);
@@ -413,11 +405,9 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 		    					e.printStackTrace();
 		    				}
 		        			
-		    				//Log.d("Picture", "Before image sent to image server");
-							//new ImageQueryTask(IMAGE_URL).execute(getApplicationContext());
-							//Log.d("Picture", "Image sent to image server");
+							new ImageQueryTask(IMAGE_URL).execute(getApplicationContext());
 						}
-            			handler.postDelayed(this, 10000);//12000
+            			handler.postDelayed(this, 6000);
 		        	}
 		        }
 		    }; 
@@ -458,60 +448,77 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 
 
 
-	private class ImageQueryTask extends AsyncTask<Context, Void, Void> 
+	private class ImageQueryTask extends AsyncTask<Context, Void, Boolean> 
     {
         private String url_str;
+        
+        private long oldTime, newTime;
 
         public ImageQueryTask(String url) {
             this.url_str = url;
         }
         
         
-        protected Void doInBackground(Context... c) {
+        protected Boolean doInBackground(Context... c) {
 			try {
 				URL url = new URL(url_str);
 				HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
-				   try {
-					   DefaultHttpClient client = new DefaultHttpClient();
-						client.getParams().setParameter(CoreProtocolPNames.PROTOCOL_VERSION, HttpVersion.HTTP_1_1);
-						HttpPost httppost = new HttpPost(url.toString());
-						MultipartEntity entity = new MultipartEntity(HttpMultipartMode.BROWSER_COMPATIBLE);					
 
-						entity.addPart("params", new StringBody(JSONParams.toString()));
-						entity.addPart("data", new FileBody(pictureFile));
+				oldTime = System.currentTimeMillis()/1000;				   
+			   
+				DefaultHttpClient client = new DefaultHttpClient();
+				client.getParams().setParameter(CoreProtocolPNames.PROTOCOL_VERSION, HttpVersion.HTTP_1_1);
+				HttpPost httppost = new HttpPost(url.toString());
+				MultipartEntity entity = new MultipartEntity(HttpMultipartMode.BROWSER_COMPATIBLE);					
 
-						Log.d("DATA", new FileBody(pictureFile).toString());
-						Log.d("Timing", "Image sent to server!");
+				entity.addPart("params", new StringBody(JSONParams.toString()));
+				entity.addPart("data", new FileBody(pictureFile));
 
-						httppost.setEntity(entity);	
+				Log.d("DATA", new FileBody(pictureFile).toString());
+				Log.d("Timing", "Finish uploading image");
 
-						ResponseHandler<String> res = new BasicResponseHandler();
-						String response = client.execute(httppost, res);
-						JSONObject JSONResponse = new JSONObject(response);
-						Log.d("ImageResponse", JSONResponse.toString());
-						Log.d("Timing", "Receive image response!");
+				httppost.setEntity(entity);	
 
-						JSONObject imageResponse = new JSONObject();
-						imageResponse.put("image_location", JSONResponse.get("local_x") + " " + JSONResponse.get("local_y"));
-						imageResponse.put("image_confidence", JSONResponse.get("overall_confidence"));
+				ResponseHandler<String> res = new BasicResponseHandler();
+				String response = client.execute(httppost, res);
+				newTime = System.currentTimeMillis()/1000;
+				
+				
+				try {
+					JSONObject JSONResponse = new JSONObject(response);
+					Log.d("ImageResponse", JSONResponse.toString());
 
-						new CentralQueryTask(CENTRAL_DYNAMIC_URL, imageResponse).execute(c);
+					JSONObject imageResponse = new JSONObject();
+					imageResponse.put("image_location", JSONResponse.get("local_x") + " " + JSONResponse.get("local_y"));
+					imageResponse.put("image_confidence", JSONResponse.get("overall_confidence"));
 
-
-				   } catch (JSONException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					} 
-				    finally {
-				     urlConnection.disconnect();
-				    }
-
-				Log.d("URL_CONNECTION","IMAGE SUCCESS!");
+					new CentralQueryTask(CENTRAL_DYNAMIC_URL, imageResponse).execute(c);
+					urlConnection.disconnect();
+					return true;
+				}
+				catch (JSONException e) {
+					e.printStackTrace();
+					urlConnection.disconnect();
+					return false;
+				} 			
 			}
 			catch (MalformedURLException e){ }
 			catch (IOException e) {Log.d("URL_EXCEPTION","IMAGE FAILURE!"+ e.getMessage()); }
 
-			return null;
+			return false;
+        }
+        
+        protected void onPostExecute(Boolean result) {
+        	CharSequence text;
+        	long diff = newTime - oldTime;
+        	if (!result) {
+        		text = "Image caused error on the server! Time elapsed: " + diff + " secs!";
+        	}
+        	else {
+        	    text = "Received image response in " + diff + " secs!";
+        	}
+        	Toast toast = Toast.makeText(getApplicationContext(), text, Toast.LENGTH_SHORT);
+        	toast.show();
         }
     }
 
@@ -536,8 +543,8 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 
 				HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
 				   try {
-					 urlConnection.setReadTimeout( 10000 /*milliseconds*/ );
-					 urlConnection.setConnectTimeout( 35000 /* milliseconds */ );
+					 urlConnection.setReadTimeout(10000);
+					 urlConnection.setConnectTimeout(35000);
 
 					 urlConnection.setDoInput(true);
 				     urlConnection.setDoOutput(true);
@@ -566,8 +573,6 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 
 				     JSONTokener tokener = new JSONTokener(builder.toString());
 				     JSONObject finalResult = new JSONObject(tokener);
-
-				     //Log.d("Timing", "Time6: Estimated location from central server obtained!");
 
 				     currentLocation[0] = (Double.valueOf(finalResult.getDouble("x")) + 20.0) * 13.0;
 				     currentLocation[1] = -(Double.valueOf(finalResult.getDouble("y")) - 49.0) * 13.0;
@@ -616,7 +621,6 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 					 urlConnection.setDoInput(true);
 				     urlConnection.setDoOutput(true);
 				     urlConnection.setFixedLengthStreamingMode(data.length);
-				     //urlConnection.setRequestProperty("Content-Length", "" + json.length());
 
 				     urlConnection.setRequestProperty("content-type","application/json; charset=utf-8");
 				     urlConnection.setRequestProperty("Accept", "application/json");
