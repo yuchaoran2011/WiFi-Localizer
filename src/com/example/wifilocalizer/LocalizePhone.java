@@ -37,7 +37,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 
-import Jama.Matrix;
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.app.Activity;
@@ -76,9 +75,6 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.TextView;
-
-import com.example.wifilocalizer.PCA.PrincipalComponent;
-
 import cz.muni.fi.sandbox.dsp.filters.ContinuousConvolution;
 import cz.muni.fi.sandbox.dsp.filters.FrequencyCounter;
 import cz.muni.fi.sandbox.dsp.filters.SinXPiWindow;
@@ -99,7 +95,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 
 	private static final String WIFI_URL = "http://shiraz.eecs.berkeley.edu:8001/wifi/submit_fingerprint";
 	private static final String IMAGE_URL = "http://quebec.eecs.berkeley.edu:8001/";
-	private static final String CENTRAL_DYNAMIC_URL = "http://136.152.39.129:8000/central/receive_hdg_and_dis";
+	private static final String CENTRAL_DYNAMIC_URL = "http://136.152.140.59:8000/central/receive_hdg_and_dis";
 
 
 	File pictureFile;
@@ -116,11 +112,10 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	private SensorManager mSensorManager;
 	private Sensor linearAccelerometer, rotationSensor, accelerometer;
 
-
+	/*
 	private ArrayList<Float> la1 = new ArrayList<Float>();
 	private ArrayList<Float> la2 = new ArrayList<Float>();
-	private ArrayList<Float> la3 = new ArrayList<Float>();
-	//private ArrayList<Float> la3 = new ArrayList<Float>();
+	private ArrayList<Float> la3 = new ArrayList<Float>();*/
 	private float[] rotationMatrix = new float[16];
 	private float[] newRotationVector = new float[3], oldRotationVector = new float[3], deltaRotationVector = new float[4];
 
@@ -286,7 +281,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				query = new JSONObject(postedData);	
 
 				//Log.d("Timing", "Time3: RSSI vector sent to WiFi server!");
-				new WifiQueryTask(WIFI_URL, query).execute(c);
+				//new WifiQueryTask(WIFI_URL, query).execute(c);
 				//Log.d("REQUEST", "WiFi Request sent!");	
 			}
 		}
@@ -387,7 +382,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 		        	if(!mAppStopped) {
 		        		camera.startPreview();
 		        		timestamp = System.currentTimeMillis();
-		        		camera.autoFocus(new AFCallback());
+		        		//camera.autoFocus(new AFCallback());
 		        		camera.startPreview(); 
 
 		        		if (pictureFile != null) {
@@ -419,7 +414,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 		    				}
 		        			
 		    				//Log.d("Picture", "Before image sent to image server");
-							new ImageQueryTask(IMAGE_URL).execute(getApplicationContext());
+							//new ImageQueryTask(IMAGE_URL).execute(getApplicationContext());
 							//Log.d("Picture", "Image sent to image server");
 						}
             			handler.postDelayed(this, 10000);//12000
@@ -681,11 +676,11 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 
 
 	protected void onPause() {
+		super.onPause();
+		
 		mAppStopped = true;
 		camera.stopPreview();
-		camera.release();
-
-		super.onPause();	
+		camera.release();	
 
 		mSensorManager.unregisterListener(this, linearAccelerometer);
 		mSensorManager.unregisterListener(this, rotationSensor);
@@ -876,20 +871,17 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	public void processAccelerometerEvent(SensorEvent event) {		
 			mConvolution = (float) (mCC.process(event.values[2]));
 			mStepDetector.onSensorChanged(event);
-			stepLength = displayStepDetectorState(mStepDetector);
+			displayStepDetectorState(mStepDetector);
 	}
 
 
-	double displayStepDetectorState(MovingAverageStepDetector detector) {
+	void displayStepDetectorState(MovingAverageStepDetector detector) {
 		MovingAverageStepDetectorState s = detector.getState();
 		boolean stepDetected = s.states[0];
 		boolean signalPowerOutOfRange = s.states[1];
 
 		if (stepDetected) {
-			if (signalPowerOutOfRange) {
-				//Log.d("Invalid Step", "Power out of range!");
-				return -10.0;
-			} else {
+			if (!signalPowerOutOfRange && detector.stepLength >= 0) {
 				Log.d("Valid Step", "Valid step!");
 					
 				/*
@@ -937,10 +929,8 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				new CentralQueryTask(CENTRAL_DYNAMIC_URL, motion).execute(this.getApplicationContext());
 
 				Log.d("REQUEST", "Valid step sent to central server!");
-				return detector.stepLength;
 			}
 		}
-		return -10.0;
 	}
 
 
