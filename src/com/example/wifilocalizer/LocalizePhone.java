@@ -94,9 +94,9 @@ class ScanComparable implements Comparator<ScanResult> {
 
 public class LocalizePhone extends Activity implements SensorEventListener {
 
-	private static final String WIFI_URL = "http://128.32.43.232:8002/wifi/submit_fingerprint";
+	private static final String WIFI_URL = "http://128.32.43.232:8003/wifi/submit_fingerprint";
 	private static final String IMAGE_URL = "http://sofia.eecs.berkeley.edu:8001/";
-	private static final String CENTRAL_DYNAMIC_URL = "http://136.152.125.42:8000/central/receive_hdg_and_dis"; 
+	private static final String CENTRAL_DYNAMIC_URL = "http://10.142.34.221:8000/central/receive_hdg_and_dis"; 
 	//http://128.32.43.232:8002 for vlsb
 	//http://128.32.43.232:8003 for cory
 
@@ -113,10 +113,10 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	private Camera camera;
 	private CameraPreview mPreview;
 	private SensorManager mSensorManager;
-	private Sensor linearAccelerometer, rotationSensor, accelerometer;
+	private Sensor rotationSensor, accelerometer;
 
 	private float[] rotationMatrix = new float[16];
-	private float[] newRotationVector = new float[3], oldRotationVector = new float[3];
+	private float[] newRotationVector = new float[3];
 
 	private float[] cameraPose = new float[3], orientation = new float[3];
 
@@ -126,7 +126,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 
 	// VLSB +52  *5.4
 	//      -49  *5.4
-	private double[] currentLocation = {52.0*5.4, 49*5.4};
+	private double[] currentLocation = {20*13, 49*13};
 
 	private MovingAverageStepDetector mStepDetector;
 	private ContinuousConvolution mCC;
@@ -177,7 +177,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 			AssetManager assetManager = getAssets();
 			InputStream input, gt;
 	        try {
-	        	input = assetManager.open("vlsb_rotated.edge");   
+	        	input = assetManager.open("cory2p_rotated.edge");   
 	        	BufferedReader reader = new BufferedReader(new InputStreamReader(input));
 	        	String line= reader.readLine();
 	        	while (line != null) {
@@ -185,13 +185,14 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	        		line = reader.readLine();
 	        	}       
 	        	
+	        	/*
 	        	gt = assetManager.open("gt_rotated.txt");
 	        	reader = new BufferedReader(new InputStreamReader(gt));
 	        	String gtLine= reader.readLine();
 	        	while (gtLine != null) {
 	        		gts.add(gtLine);
 	        		gtLine = reader.readLine();
-	        	}   
+	        	}   */
 	        } catch (IOException e) {
 	            // TODO Auto-generated catch block
 	            e.printStackTrace();
@@ -212,10 +213,10 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				//      -49  *13
 				// VLSB +52  *5.4
 				//      -49  *5.4
-	        	float x1 = (Float.parseFloat(splited[0])+52)*5.4f;
-	        	float y1 = -(Float.parseFloat(splited[1])-49)*5.4f;
-	        	float x2 = (Float.parseFloat(splited[2])+52)*5.4f;
-	        	float y2 = -(Float.parseFloat(splited[3])-49)*5.4f;
+	        	float x1 = (Float.parseFloat(splited[0])+20)*13f;
+	        	float y1 = -(Float.parseFloat(splited[1])-49)*13f;
+	        	float x2 = (Float.parseFloat(splited[2])+20)*13f;
+	        	float y2 = -(Float.parseFloat(splited[3])-49)*13f;
 				canvas.drawLine(x1, y1, x2, y2, wallPaint);
 			}
 			
@@ -242,11 +243,12 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 			case MotionEvent.ACTION_UP:
 				mTouched = true;
 				Log.d("TOUCH", "touch event detected");
+				/*
 				counter++;
 				if (counter <= 14) {
 					sendRSSI();
 				}
-				break;
+				break;*/
 			}
 			return true;
 		}
@@ -260,7 +262,6 @@ public class LocalizePhone extends Activity implements SensorEventListener {
         
         mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         
-        linearAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
         rotationSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
         accelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
 
@@ -273,7 +274,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 		IntentFilter i = new IntentFilter();
 		i.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
 
-		/*
+		
 		registerReceiver(receiver = new BroadcastReceiver(){
 
 
@@ -297,18 +298,18 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				}
 
 				//macRSSI.put("cluster_id", 1);
-				macRSSI.put("cutoff_dB", -65);			
+				macRSSI.put("cutoff_dB", -80);			
 
 				queryCore = new JSONObject(macRSSI);
 				postedData.put("fingerprint_data", queryCore);
 				query = new JSONObject(postedData);	
 
 				Log.d("Timing", "WiFi sent to WiFi server.");
-				//new WifiQueryTask(WIFI_URL, query).execute(c);
+				new WifiQueryTask(WIFI_URL, query).execute(c);
 			}
 		}
 		}
-	,i);    */	
+	,i);    
 
 		// Show the Up button in the action bar.
 		setupActionBar();
@@ -405,7 +406,6 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 
         mAppStopped = false; 
         
-        mSensorManager.registerListener(this, linearAccelerometer, SensorManager.SENSOR_DELAY_GAME);
         mSensorManager.registerListener(this, rotationSensor, SensorManager.SENSOR_DELAY_GAME);
         mSensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_GAME);
         
@@ -413,7 +413,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
         
         
         Runnable r1 = null;
-		if (wifi.isWifiEnabled()) {/*
+		if (wifi.isWifiEnabled()) {
 			r1 = new Runnable()
 	        {
 	            public void run() 
@@ -424,8 +424,9 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	                }
 	            }
 	        };
-			handler.postDelayed(r1, 100);*/
+			handler.postDelayed(r1, 100);
 		
+			/*
 		 Runnable r2 = new Runnable() {
 
 		        @Override
@@ -470,7 +471,7 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 		        	}
 		        }
 		    }; 
-		    handler.postDelayed(r2, 2500); 
+		    handler.postDelayed(r2, 2500); */
 		    
 		
 		    
@@ -671,8 +672,8 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 				     	// VLSB +52  *5.4
 						//      -49  *5.4
 
-				     currentLocation[0] = (Double.valueOf(finalResult.getDouble("x")) + 52.0) * 5.4;
-				     currentLocation[1] = -(Double.valueOf(finalResult.getDouble("y")) - 49.0) * 5.4;
+				     currentLocation[0] = (Double.valueOf(finalResult.getDouble("x")) + 20.0) * 13;
+				     currentLocation[1] = -(Double.valueOf(finalResult.getDouble("y")) - 49.0) * 13;
 				     mapView.postInvalidate();
 
 				     in.close();
@@ -786,10 +787,9 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 		camera.stopPreview();
 		camera.release();	
 
-		mSensorManager.unregisterListener(this, linearAccelerometer);
 		mSensorManager.unregisterListener(this, rotationSensor);
 		mSensorManager.unregisterListener(this, accelerometer);
-		//unregisterReceiver(receiver);
+		unregisterReceiver(receiver);
 	}
 
 
@@ -1009,7 +1009,11 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 	/*****    Sensor Code    ****/
 
 	public final void onAccuracyChanged(Sensor sensor, int accuracy) {
-	    // Do something here if sensor accuracy changes.
+	    // Do something here if sensor accuracy changes
+		if (sensor.getType() == Sensor.TYPE_ROTATION_VECTOR) 
+			Log.d("TYPE_ROTATION_VECTOR", accuracy+"");
+		else
+			Log.d("TYPE_ACCELEROMETER", accuracy+"");
 	  }
 
 	public void onSensorChanged(SensorEvent event){
@@ -1031,7 +1035,19 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 		   orientation = new float[3];
 
 		   newRotationVector = event.values.clone();
-		   SensorManager.getRotationMatrixFromVector(rotationMatrix, newRotationVector);
+		   try {
+				SensorManager.getRotationMatrixFromVector(rotationMatrix, newRotationVector);
+			} catch (IllegalArgumentException e) { // A way around Samsung Galaxy Note3 and S4 bug 
+				if (newRotationVector.length > 3) {
+					float[] newVector = new float[] {
+						newRotationVector[0],
+						newRotationVector[1],
+						newRotationVector[2]
+					};
+					SensorManager.getRotationMatrixFromVector(rotationMatrix, newVector); 
+				}
+			}
+		   
 
 		   if (currTimestamp >= timestamp) {
 			   SensorManager.getOrientation(rotationMatrix, orientation);
@@ -1039,9 +1055,6 @@ public class LocalizePhone extends Activity implements SensorEventListener {
 			   cameraPose[1] = (float) Math.round(Math.toDegrees(orientation[1])*100)/100; // Pitch
 			   cameraPose[2] = (float) Math.round(Math.toDegrees(orientation[0])*100)/100; // Yaw
 		   }
-           oldRotationVector[0] = newRotationVector[0];
-           oldRotationVector[1] = newRotationVector[1];
-           oldRotationVector[2] = newRotationVector[2];
 	   }
 	 }
 }
